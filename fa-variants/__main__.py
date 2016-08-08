@@ -42,14 +42,13 @@ def main():
     main_pipeline = ruffus.Pipeline.pipelines["main"]
 
     # bamfiles
-    raw_files = [x.name for x in os.scandir('data/bam') if
+    raw_files = [x.path for x in os.scandir('data/bam') if
                  x.name.endswith('.bam') and x.is_file]
-    raw_file_flags = [os.path.join("ruffus/", x) for x in raw_files]
     mapped_raw = main_pipeline.originate(
         name='mapped_raw',
-        task_func=functions.touch,
-        output=raw_file_flags)
-
+        task_func=os.path.isfile,
+        output=raw_files)
+    
     # mark duplicates with picard
 
     ###################
@@ -57,9 +56,9 @@ def main():
     ###################
 
     # print the flowchart
-    ruffus.pipeline_printout_graph("ruffus/flowchart.pdf", "pdf",
-                                   pipeline_name="5 accessions analysis "
-                                                 "pipeline")
+    ruffus.pipeline_printout_graph(
+        "ruffus/flowchart.pdf", "pdf",
+        pipeline_name="5 accessions variant calling pipeline")
 
     # run the pipeline
     ruffus.cmdline.run(options, multithread=8)
