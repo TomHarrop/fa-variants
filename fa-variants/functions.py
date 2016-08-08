@@ -19,6 +19,14 @@ def flatten_list(l):
         else:
             yield x
 
+
+# touch function for updating ruffus flag files
+def touch(fname, mode=0o666, dir_fd=None, **kwargs):
+    flags = os.O_CREAT | os.O_APPEND
+    with os.fdopen(os.open(fname, flags=flags, mode=mode, dir_fd=dir_fd)) as f:
+        os.utime(f.fileno() if os.utime in os.supports_fd else fname,
+                 dir_fd=None if os.supports_fd else dir_fd, **kwargs)
+
 ############################
 # JOB SUBMISSION FUNCTIONS #
 ############################
@@ -71,14 +79,6 @@ def submit_job(job_script, ntasks, cpus_per_task, job_name, extras=[]):
 def print_job_submission(job_name, job_id):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     print('[', now, '] : Job ' + job_name + ' run with JobID ' + job_id)
-
-
-# touch function for updating ruffus flag files
-def touch(fname, mode=0o666, dir_fd=None, **kwargs):
-    flags = os.O_CREAT | os.O_APPEND
-    with os.fdopen(os.open(fname, flags=flags, mode=mode, dir_fd=dir_fd)) as f:
-        os.utime(f.fileno() if os.utime in os.supports_fd else fname,
-                 dir_fd=None if os.supports_fd else dir_fd, **kwargs)
 
 ######################
 # FUNCTION GENERATOR #
