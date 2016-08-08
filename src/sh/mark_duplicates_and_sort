@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+
+# parse options
+OPTIND=1
+while getopts ":i:o:" opt; do
+    case "$opt" in
+        i)  input_files=$OPTARG
+            ;;
+        o)  output_files=$OPTARG
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument." >&2
+            exit 1
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))"
+
+printf " input_files: %s\n" "$input_files"
+printf "output_files: %s\n" "$output_files"
+
+source "src/sh/bash_header"
+
+###############
+# CODE STARTS #
+###############
+
+picard_ram=$((maxCpus*3))"g"
+mrir=$((ram_limit/6000))
+
+echo -e "[ $(date): Add read groups, sort, mark duplicates and create index ]"
+
+# make outdir
+outdir="output/mark_duplicates_and_sort"
+if [[ ! -d "$outdir" ]]; then
+    mkdir -p "$outdir"
+fi
+tmpdir="tmp"
+if [[ ! -d "$tmpdir" ]]; then
+    mkdir -p "$tmpdir"
+fi
+
+# parse RG information from BAM:
+# RGPU=flowcell+lane
+bam_line="$(samtools view "$input_files" | head -n 1)"
+flowcell="$(echo "$bam_line" | cut -d ':' -f 3)"
+lane="$(echo "$bam_line" | cut -d ':' -f 4)"
+rgpu="$flowcell"."$lane"
+# RGLB = library, RGID = library
+rglb="$(basename "$input_files" .Aligned.out.bam)"
+# RGSM = sample
+rgid=${rglb:0:1}
+library_number=${rglb:1:1}
+if [[ "$library_number" -le 3 ]]; then
+    rgsm="$rgid.PBM"
+else
+    rgsm="$rgid.SM"
+fi
+
+echo -e "[ $(date): Setting read groups ]"
+printf "RGLB: %s\n" "$rglb"
+printf "RGSM: %s\n" "$rgsm"
+printf "RGPU: %s\n" "$rgpu"
+
+# set output file
+sorted_bam_file="$outdir"/"$rglb".rg_added_sorted.bam
+log_file="$outdir"/"$rglb".AddOrReplaceReadGroups.log
+
+# run AddOrReplaceReadGroups
+
+echo -e "[ $(date): Adding read groups and sorting BAM to file ]"
+printf "sorted_bam_file: %s\n" "$sorted_bam_file"
+printf "       log_file: %s\n" "$log_file"
+
+cmd1="java -Xmx$picard_ram -XX:ParallelGCThreads=$maxCpus \
+        -jar bin/picard.jar \
+        AddOrReplaceReadGroups \
+        MAX_RECORDS_IN_RAM=$mrir TMP_DIR=$tmpdir COMPRESSION_LEVEL=9 \
+        I=$input_files O=$sorted_bam_file \
+        SO=coordinate RGID=$rglb RGLB=$rglb RGSM=$rgsm RGPL=illumina \
+        RGPU=$rgpu"
+
+srun --ntasks=1 --cpus-per-task="$maxCpus" --exclusive --job-name="$rglb"\
+    --output="$log_file" $cmd1 &
+
+echo -e "[ $(date): Waiting for AddOrReplaceReadGroups to finish ]"
+FAIL=0
+fail_wait
+
+# set output files
+dedupped_bam_file="$output_files"
+metrics_file="$outdir"/"$rglb".metrics
+log_file="$outdir"/"$rglb".MarkDuplicates.log
+
+# run MarkDuplicates
+echo -e "[ $(date): Marking duplicates ]"
+printf "dedupped_bam_file: %s\n" "$dedupped_bam_file"
+printf "     metrics_file: %s\n" "$metrics_file"
+printf "         log_file: %s\n" "$log_file"
+
+cmd2="java -Xmx$picard_ram -XX:ParallelGCThreads=$maxCpus \
+        -jar bin/picard.jar \
+        MarkDuplicates \
+        MAX_RECORDS_IN_RAM=$mrir TMP_DIR=$tmpdir COMPRESSION_LEVEL=9 \
+        VALIDATION_STRINGENCY=SILENT \
+        I=$sorted_bam_file O=$dedupped_bam_file \
+        CREATE_INDEX=true  METRICS_FILE=$metrics_file"
+
+srun --ntasks=1 --cpus-per-task="$maxCpus" --exclusive --job-name="$rglb"\
+    --output="$log_file" $cmd2 &
+
+echo -e "[ $(date): Waiting for MarkDuplicates to finish ]"
+FAIL=0
+fail_wait
+
+# tidy up intermediate file (not enough space to store)
+echo -e "[ $(date): Removing intermediate file ]"
+rm "$sorted_bam_file"
+
+# log metadata
+metadata_file="$outdir"/METADATA.csv
+echo -e "[ $(date): Logging metadata ]"
+printf "metadata_file: %s\n" "$metadata_file"
+cat <<- _EOF_ > $metadata_file
+  Script,${0}
+  branch,$(git rev-parse --abbrev-ref HEAD)
+  hash,$(git rev-parse HEAD)
+  date,$(date +%F)
+  samtools version,$(samtools --version | head -n 1)
+  picard-tools version,$(java -jar bin/picard.jar MarkDuplicates \
+                            --version 2>&1)
+  output,"$outdir"
+_EOF_
+
+echo -e "[ $(date): Done, exiting ]"
+exit 0

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+source "src/sh/bash_header"
+
+mail_output() {
+    subject="[Tom@SLURM] Pipeline started at $(date) finished"
+    echo "" | mail -s "$subject" -A ruffus/pipeline.log.txt tom
+    rm ruffus/pipeline.log.txt
+}
+
+python3 fa-variants -v5 &> ruffus/pipeline.log.txt
+
+mail_output
+
+exit 0
