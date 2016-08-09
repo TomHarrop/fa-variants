@@ -56,7 +56,7 @@ def main():
             job_script='src/sh/mark_duplicates_and_sort',
             job_name='dedupe',
             job_type='transform',
-            cpus_per_task=4),
+            cpus_per_task=2),
         input=mapped_raw,
         filter=ruffus.regex(r"data/bam/(.*).Aligned.out.bam"),
         output=[r"output/mark_duplicates_and_sort/\1.deduped.bam"])

@@ -140,23 +140,23 @@ def generate_job_function(
         if job_type in ['transform', 'merge']:
             input_files = [function_args_list.pop(0)]
             input_files_flat = list(flatten_list(input_files))
-            x = ['-i'] * len(input_files_flat)
+            y = ['-i'] * len(input_files_flat)
             new_args = [x for t in
-                        zip(x, input_files_flat)
+                        zip(y, input_files_flat)
                         for x in t]
             submit_args.append(new_args)
-            
+
             if verbose:
                 print("\ninput_files_flat:", input_files_flat)
                 print("\nnew_args: ", new_args)
                 print("\nsubmit_args: ", submit_args)
 
-        # all job_types have output_files
+        # output_files required for all job_types
         output_files = [function_args_list.pop(0)]
         output_files_flat = list(flatten_list(output_files))
-        x = ['-o'] * len(output_files_flat)
+        y = ['-o'] * len(output_files_flat)
         new_args = [x for t in
-                    zip(x, output_files_flat)
+                    zip(y, output_files_flat)
                     for x in t]
         submit_args.append(new_args)
 
