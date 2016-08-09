@@ -39,8 +39,6 @@ def submit_job(job_script, ntasks, cpus_per_task, job_name, extras=[]):
     output to file.
     '''
     # call salloc as subprocess
-    print(['salloc', '--ntasks=' + ntasks, '--cpus-per-task=' + cpus_per_task,
-           '--job-name=' + job_name, job_script] + list(extras))
     proc = subprocess.Popen(['salloc', '--ntasks=' + ntasks,
                              '--cpus-per-task=' + cpus_per_task,
                              '--job-name=' + job_name, job_script] +

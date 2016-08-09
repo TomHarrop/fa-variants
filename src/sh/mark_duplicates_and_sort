@@ -85,7 +85,7 @@ cmd1="java -Xmx$picard_ram -XX:ParallelGCThreads=$ParallelGCThreads \
         SO=coordinate RGID=$rglb RGLB=$rglb RGSM=$rgsm RGPL=illumina \
         RGPU=$rgpu"
 
-srun --ntasks=1 --cpus-per-task="$maxCpus" --exclusive --job-name="$rglb"\
+srun --ntasks=1 --cpus-per-task="$MAX_CPUS" --exclusive --job-name="$rglb"\
     --output="$log_file" $cmd1 &
 
 echo -e "[ $(date): Waiting for AddOrReplaceReadGroups to finish ]"
@@ -111,7 +111,7 @@ cmd2="java -Xmx$picard_ram -XX:ParallelGCThreads=$ParallelGCThreads \
         I=$sorted_bam_file O=$dedupped_bam_file \
         CREATE_INDEX=true  METRICS_FILE=$metrics_file"
 
-srun --ntasks=1 --cpus-per-task="$maxCpus" --exclusive --job-name="$rglb"\
+srun --ntasks=1 --cpus-per-task="$MAX_CPUS" --exclusive --job-name="$rglb"\
     --output="$log_file" $cmd2 &
 
 echo -e "[ $(date): Waiting for MarkDuplicates to finish ]"

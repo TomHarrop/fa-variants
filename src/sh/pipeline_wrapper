@@ -8,6 +8,8 @@ mail_output() {
     rm ruffus/pipeline.log.txt
 }
 
+trap mail_output SIGHUP SIGINT SIGTERM ERR
+
 python3 fa-variants -v5 &> ruffus/pipeline.log.txt
 
 mail_output
