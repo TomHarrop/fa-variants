@@ -56,10 +56,10 @@ def main():
             job_script='src/sh/mark_duplicates_and_sort',
             job_name='dedupe',
             job_type='transform',
-            cpus_per_task=8),
+            cpus_per_task=4),
         input=mapped_raw,
         filter=ruffus.regex(r"data/bam/(.*).Aligned.out.bam"),
-        output=[r"output/mark_duplicates_and_sort/\1.rg_added_sorted.bam"])
+        output=[r"output/mark_duplicates_and_sort/\1.deduped.bam"])
 
     ###################
     # RUFFUS COMMANDS #

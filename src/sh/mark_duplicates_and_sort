@@ -29,8 +29,9 @@ source "src/sh/bash_header"
 # CODE STARTS #
 ###############
 
-picard_ram=$((maxCpus*3))"g"
-mrir=$((ram_limit/6000))
+picard_ram=$((MAX_CPUS*3))"g"
+mrir=$((RAM_LIMIT/6000)) # max records in RAM
+ParallelGCThreads=$((MAX_CPUS-1)) # number of garbage collecting threads
 
 echo -e "[ $(date): Add read groups, sort, mark duplicates and create index ]"
 
@@ -76,7 +77,7 @@ echo -e "[ $(date): Adding read groups and sorting BAM to file ]"
 printf "sorted_bam_file: %s\n" "$sorted_bam_file"
 printf "       log_file: %s\n" "$log_file"
 
-cmd1="java -Xmx$picard_ram -XX:ParallelGCThreads=$maxCpus \
+cmd1="java -Xmx$picard_ram -XX:ParallelGCThreads=$ParallelGCThreads \
         -jar bin/picard.jar \
         AddOrReplaceReadGroups \
         MAX_RECORDS_IN_RAM=$mrir TMP_DIR=$tmpdir COMPRESSION_LEVEL=9 \
@@ -102,7 +103,7 @@ printf "dedupped_bam_file: %s\n" "$dedupped_bam_file"
 printf "     metrics_file: %s\n" "$metrics_file"
 printf "         log_file: %s\n" "$log_file"
 
-cmd2="java -Xmx$picard_ram -XX:ParallelGCThreads=$maxCpus \
+cmd2="java -Xmx$picard_ram -XX:ParallelGCThreads=$ParallelGCThreads \
         -jar bin/picard.jar \
         MarkDuplicates \
         MAX_RECORDS_IN_RAM=$mrir TMP_DIR=$tmpdir COMPRESSION_LEVEL=9 \

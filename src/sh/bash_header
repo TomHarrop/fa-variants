@@ -44,13 +44,13 @@ trap _err_trap ERR
 
 # how many CPUs?
 if [[ $SLURM_JOB_CPUS_PER_NODE ]]; then
-  maxCpus="$SLURM_JOB_CPUS_PER_NODE"
-  echo -e "[ $(date): Running with $maxCpus CPUs ]"
+  MAX_CPUS="$SLURM_JOB_CPUS_PER_NODE"
+  echo -e "[ $(date): Running with $MAX_CPUS CPUs ]"
 else
-  maxCpus=1
+  MAX_CPUS=1
 fi
-let "ram_limit = $maxCpus * 3000000000"
-echo -e "[ $(date): Allocating $((ram_limit/1000000000)) GB RAM ]"
+let "RAM_LIMIT = $MAX_CPUS * 3000000000"
+echo -e "[ $(date): Allocating $((RAM_LIMIT/1000000000)) GB RAM ]"
 
 # handle waiting
 FAIL=0
