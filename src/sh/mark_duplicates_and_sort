@@ -123,7 +123,7 @@ echo -e "[ $(date): Removing intermediate file ]"
 rm "$sorted_bam_file"
 
 # log metadata
-metadata_file="$outdir"/METADATA.csv
+metadata_file="$outdir"/"$rglb".METADATA.csv
 echo -e "[ $(date): Logging metadata ]"
 printf "metadata_file: %s\n" "$metadata_file"
 cat <<- _EOF_ > $metadata_file
