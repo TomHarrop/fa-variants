@@ -41,7 +41,7 @@ outdir="output/mark_duplicates_and_sort"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
-tmpdir="tmp"
+tmpdir="${outdir}/tmp"
 if [[ ! -d "${tmpdir}" ]]; then
     mkdir -p "${tmpdir}"
 fi
