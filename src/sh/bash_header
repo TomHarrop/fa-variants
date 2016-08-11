@@ -33,7 +33,7 @@ traceback() {
     local function="${FUNCNAME[$i]}"
     local file="${BASH_SOURCE[$i]}"
     local line="${BASH_LINENO[$j]}"
-    printf "     %s() in %s:%s\n" "${function}" in "${file}" "${line}" 1>&2
+    printf "     %s() in %s:%s\n" "${function}" "${file}" "${line}" 1>&2
   done
 }
 
