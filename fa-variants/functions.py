@@ -27,6 +27,15 @@ def touch(fname, mode=0o666, dir_fd=None, **kwargs):
         os.utime(f.fileno() if os.utime in os.supports_fd else fname,
                  dir_fd=None if os.supports_fd else dir_fd, **kwargs)
 
+
+# check if logon details were provided
+def check_login_details():
+    if not jgi_logon:
+        raise ValueError('jgi_logon required for download job')
+    if not jgi_password:
+        raise ValueError('jgi_password required for download job')
+
+
 ############################
 # JOB SUBMISSION FUNCTIONS #
 ############################

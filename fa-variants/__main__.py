@@ -9,8 +9,6 @@
 import functions
 import ruffus
 import os
-import datetime
-import re
 
 
 def main():
@@ -49,8 +47,29 @@ def main():
         task_func=os.path.isfile,
         output=raw_files)
 
+    # genome fasta
+    ref_fa = main_pipeline.originate(
+        name='ref_fa',
+        task_func=functions.generate_job_function(
+            job_script='src/sh/download_genome',
+            job_name='ref_fa',
+            job_type='download'),
+        output='data/genome/Osativa_323_v7.0.fa',
+        extras=[jgi_logon, jgi_password])
+
+    # annotation
+    annot = main_pipeline.originate(
+        name='annot',
+        task_func=functions.generate_job_function(
+            job_script='src/sh/download_genome',
+            job_name='annot',
+            job_type='download'),
+        output=('data/genome/'
+                'Osativa_323_v7.0.gene_exons.gffread.rRNAremoved.gtf'),
+        extras=[jgi_logon, jgi_password])
+
     # mark duplicates with picard
-    deduped = main_pipeline.transform(
+    deduped = main_pipeline.subdivide(
         name='dedupe',
         task_func=functions.generate_job_function(
             job_script='src/sh/mark_duplicates_and_sort',
@@ -59,7 +78,22 @@ def main():
             cpus_per_task=2),
         input=mapped_raw,
         filter=ruffus.regex(r"data/bam/(.*).Aligned.out.bam"),
-        output=[r"output/mark_duplicates_and_sort/\1.deduped.bam"])
+        output=(r"output/mark_duplicates_and_sort/\1.deduped.bam",
+                r"output/mark_duplicates_and_sort/\1.deduped.bai"))
+
+    # Split'N'Trim and reassign mapping qualities
+    split_and_trimmed = main_pipeline.transform(
+        name='split_trim',
+        task_func=functions.generate_job_function(
+            job_script='src/sh/split_trim',
+            job_name='split_trim',
+            job_type='transform',
+            cpus_per_task=4),
+        input=deduped,
+        add_inputs=ruffus.add_inputs(ref_fa),
+        filter=ruffus.formatter(
+            "output/mark_duplicates_and_sort/(?P<LIB>.+).deduped.bam"),
+        output=["{subdir[0][1]}/split_trim/{LIB[0]}.split.bam"])
 
     ###################
     # RUFFUS COMMANDS #

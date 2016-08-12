@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+output_files=""
+jgi_login=""
+jgi_password=""
+
+# parse options
+OPTIND=1
+while getopts ":o:e:p:" opt; do
+    case "${opt}" in
+        o)  output_files="${OPTARG}"
+            printf "output_files:      %s\n" "$output_files"
+            ;;
+        e)  jgi_login="${OPTARG}"
+            printf "   jgi_login:      %s\n" "$jgi_login"
+            ;;
+        p)  jgi_password="${OPTARG}"
+            printf "jgi_password:   [REDACTED]\n"
+            ;;
+        :)
+            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
+            exit 1
+            ;;
+        \?)
+            printf "Invalid option: -%s\n" "${OPTARG}" >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))"
+
+source "src/sh/bash_header"
+
+###############
+# CODE STARTS #
+###############
+
+genome_download () {
+    # check variables
+    printf "    genome_file: %s\n" "${genome_file}"
+    printf "     genome_dir: %s\n" "${genome_dir}"
+
+    # download urls
+    genome_url='http://genome.jgi.doe.gov/Osativa/download/_JAMO/5693356c0d87851ee9726b00/Osativa_323_v7.0.fa.gz'
+
+    # download genome
+    cat <<- _EOF_
+    [ $(date): Downloading genome fasta ]
+    ${genome_url}
+_EOF_
+    curl "${genome_url}" -b "${genome_dir}"/cookies \
+        -c "${genome_dir}"/cookies > "${genome_file}"
+
+    # unzip
+    printf "[ %s: Unzipping downloads ]\n" "$(date)"
+    gunzip -f "${genome_file}"
+}
+
+annotation_download () {
+    # check variables
+    annotation_file="${genome_dir}/$(basename \
+    "${annotation_file_final}" .gffread.rRNAremoved.gtf).gff3.gz"
+    printf "annotation_file: %s\n" "${annotation_file}"
+    printf "     genome_dir: %s\n" "${genome_dir}"
+
+    # download urls
+    annot_url='http://genome.jgi.doe.gov/Osativa/download/_JAMO/5693356b0d87851ee9726af7/Osativa_323_v7.0.gene_exons.gff3.gz'
+
+    # download annotation
+    cat <<- _EOF_
+    [ $(date): Downloading annotation ]
+    ${annot_url}
+_EOF_
+    curl "${annot_url}" -b "${genome_dir}"/cookies \
+        -c "${genome_dir}"/cookies > "${annotation_file}"
+
+    # unzip
+    printf "[ %s: Unzipping downloads ]\n" "$(date)"
+    gunzip -f "${annotation_file}"
+
+    # make gtf
+    annot="${genome_dir}/$(basename "${annotation_file}" .gff3.gz)"
+    printf "[ %s: Making GTF file with gffread ]\n" "$(date)"
+    gffread -o "${annot}.gffread.gtf" -T "${annot}.gff3"
+
+    # remove Chr9 rRNA 'genes'
+    printf "[ %s: Removing rRNA genes LOC_Os09g00999 and LOC_Os09g01000 ]\n" \
+        "$(date)"
+    sed '/LOC_Os09g01000/d' "${annot}.gffread.gtf" \
+        | sed '/LOC_Os09g00999/d' > "${genome_dir}/gtf_final.tmp"
+
+    # remove cuffcomp intermediates
+    printf "[ %s: Removing intermediate files ]\n" "$(date)"
+    find "${genome_dir}" -name "*gffread*" -delete
+    mv "${genome_dir}/gtf_final.tmp" "${annot}.gffread.rRNAremoved.gtf"
+}
+
+# check login and password
+if [[ ! "${jgi_login-}" ]]; then
+    printf "ERROR: specify jgi_login with -e\n" 1>&2
+    exit 1
+fi
+if [[ ! "${jgi_password-}" ]]; then
+    printf "ERROR: specify jgi_password with -p\n" 1>&2
+    exit 1
+fi
+
+# set up download directory
+genome_dir="$(dirname "${output_files}")"
+if [ ! -d "${genome_dir}" ]; then
+    mkdir -p "${genome_dir}"
+fi
+
+# get a phytozome cookie
+if [[ ! -e "${genome_dir}/cookies" ]]; then
+    printf "[ %s: Signing on to phytozome at JGI ]\n" "$(date)"
+    curl https://signon.jgi.doe.gov/signon/create --data-ascii \
+        login="${jgi_login}"\&password="${jgi_password}" \
+    -b "${genome_dir}"/cookies -c "${genome_dir}"/cookies > /dev/null
+fi
+
+# pick the annotation and genome file from input
+if printf "%s" "${output_files}" | grep -q "gtf$"; then
+    annotation_file_final="${output_files}"
+    annotation_download
+elif printf "%s" "${output_files}" | grep -q "fa$"; then
+    genome_file="${output_files}".gz
+    genome_download
+else
+    printf "ERROR: %s not recognised as gff or fa\n" "${output_files}"
+    exit 1
+fi
+
+# remove cookie
+find "${genome_dir}" -name "cookies" -delete
+
+# log metadata
+cat -t <<- _EOF_ > "${genome_dir}/METADATA.csv"
+    script,${0}
+    branch,$(git rev-parse --abbrev-ref HEAD)
+    hash,$(git rev-parse HEAD)
+    date,$(date +%F)
+_EOF_
+
+printf "[ %s: Done ]\n" "$(date)"
+exit 0
