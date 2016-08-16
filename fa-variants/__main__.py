@@ -42,10 +42,16 @@ def main():
     # bamfiles
     raw_files = [x.path for x in os.scandir('data/bam') if
                  x.name.endswith('.bam') and x.is_file]
+
+    # subset the files while the pipeline is in development
+    raw_files_subset = [x for x in raw_files if
+                        'G1' in x or 'G4' in x or 'J1' in x or 'J4' in x]
+
+    # check that the files exist
     mapped_raw = main_pipeline.originate(
         name='mapped_raw',
         task_func=os.path.isfile,
-        output=raw_files)
+        output=raw_files_subset)
 
     # genome fasta
     ref_fa = main_pipeline.originate(

@@ -1,6 +1,6 @@
   Script,src/sh/fa_idx
   branch,master
-  hash,e8fc342e8c97eda0e3562e4f354f42cd18f9b1b6
+  hash,5883af4af5527a09c0959388a7d0126d1849692b
   date,2016-08-16
   samtools version,samtools 1.3.1
   picard-tools version,2.5.0-gradle-17-g960bc00-SNAPSHOT

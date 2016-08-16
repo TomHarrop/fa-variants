@@ -36,6 +36,7 @@ printf "[ %s: Split and trim and reassign mapping qualities ]\n" \
        "$(date)"
 
 java_ram=$((max_cpus*3))"g"
+mrir=$((ram_limit/6000)) # max records in RAM
 
 # parse fasta file from input
 for input_file in "${input_files[@]}"; do
@@ -69,7 +70,7 @@ printf "  fasta_file: %s\n" "${fasta_file}"
 printf "    log_file: %s\n" "${log_file}"
 
 cmd="java -Xmx${java_ram} -jar ${gatk} \
-        --bam_compression 9 \
+        --bam_compression 9 --maxReadsInMemory ${mrir} \
         -T SplitNCigarReads \
         -R ${fasta_file} -I ${bam_file} -o ${output_files} \
         -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 \
@@ -77,7 +78,7 @@ cmd="java -Xmx${java_ram} -jar ${gatk} \
 
 printf "Final command line: %s\n" "${cmd//+( )/ }"
 
-srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+echo srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" ${cmd} &
 
 printf "[ %s: Waiting for SplitNCigarReads to finish ]\n" "$(date)"
@@ -85,17 +86,16 @@ FAIL=0
 fail_wait
 
 # log metadata
-metadata_file="${outdir}"/"${bn}".METADATA.csv
+metadata_file="${outdir}/${bn}.METADATA.csv"
 printf "[ %s: Logging metadata ]\n" "$(date)"
 printf "metadata_file: %s\n" "${metadata_file}"
-cat <<- _EOF_ > ${metadata_file}
-  Script,${0}
-  branch,$(git rev-parse --abbrev-ref HEAD)
-  hash,$(git rev-parse HEAD)
-  date,$(date +%F)
-  gatk version,$(java -jar ${gatk} \
-                            --version 2>&1)
-  output,${outdir}
+cat <<- _EOF_ > "${metadata_file}"
+    Script,${0}
+    branch,$(git rev-parse --abbrev-ref HEAD)
+    hash,$(git rev-parse HEAD)
+    date,$(date +%F)
+    gatk version,$(java -jar ${gatk} --version 2>&1)
+    output,${outdir}
 _EOF_
 
 printf "[ %s: Done ]\n" "$(date)"
