@@ -78,7 +78,7 @@ cmd="java -Xmx${java_ram} -jar ${gatk} \
 
 printf "Final command line: %s\n" "${cmd//+( )/ }"
 
-echo srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" ${cmd} &
 
 printf "[ %s: Waiting for SplitNCigarReads to finish ]\n" "$(date)"

@@ -51,7 +51,7 @@ def main():
     mapped_raw = main_pipeline.originate(
         name='mapped_raw',
         task_func=os.path.isfile,
-        output=raw_files_subset)
+        output=raw_files_subset)  # subset speficied here
 
     # genome fasta
     ref_fa = main_pipeline.originate(
