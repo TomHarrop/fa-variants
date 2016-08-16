@@ -69,7 +69,7 @@ printf "  fasta_file: %s\n" "${fasta_file}"
 printf "    log_file: %s\n" "${log_file}"
 
 cmd="java -Xmx${java_ram} -jar ${gatk} \
-        --bam_compression 9 --num_threads ${max_cpus} \
+        --bam_compression 9 \
         -T SplitNCigarReads \
         -R ${fasta_file} -I ${bam_file} -o ${output_files} \
         -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 \
