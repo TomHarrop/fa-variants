@@ -67,7 +67,7 @@ def main():
             cpus_per_task=6),
         input=ref_fa,
         filter=ruffus.suffix(".fa"),
-        output=['.dict', '.fai'])
+        output=['.dict', '.fa.fai'])
 
     # annotation
     annot = main_pipeline.originate(
