@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+# parse options
+OPTIND=1
+of_n=0
+while getopts ":i:o:" opt; do
+    case "${opt}" in
+        i)  input_files="${OPTARG}"
+            ;;
+        o)  output_files[${of_n}]="${OPTARG}"
+            of_n=$((of_n + 1))
+            ;;
+        :)
+            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
+            exit 1
+            ;;
+        \?)
+            printf "Invalid option: -%s\n" "${OPTARG}" >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))"
+
+source "src/sh/bash_header"
+
+###############
+# CODE STARTS #
+###############
+
+java_ram=$((max_cpus*3))"g"
+gc_threads=$((max_cpus-1)) # number of garbage collecting threads
+
+printf "[ %s: Prepare .dict and .fai for reference ]\n" "$(date)"
+
+# parse output_files
+for output_file in "${output_files[@]}"; do
+    if printf "%s" "${output_file}" | grep -q "fai$"; then
+        fai_file="${output_file}"
+    elif printf "%s" "${output_file}" | grep -q "dict$"; then
+        dict_file="${output_file}"
+    else
+        printf "ERROR: %s not recognised\n" "${output_file}"
+        exit 1
+    fi
+done
+
+output_dirname="$(dirname "${input_files}")"
+
+log_file="${output_dirname}/fa_idx.log"
+
+# check variables
+printf " input_files: %s\n" "${input_files}" # data/genome/Osativa_323_v7.0.fa
+printf "output_files: %s\n" "${output_files[@]}"
+printf "   dict_file: %s\n" "${dict_file}"
+printf "    fai_file: %s\n" "${fai_file}"
+
+# make the dict file
+
+cmd1="java -Xmx${java_ram} -XX:ParallelGCThreads=${gc_threads} \
+        -jar bin/picard.jar \
+        CreateSequenceDictionary \
+        R=${input_files} O=${dict_file}"
+
+srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+    --output="${log_file}" ${cmd1} &
+
+printf "[ %s: Waiting for CreateSequenceDictionary to finish ]\n" "$(date)"
+FAIL=0
+fail_wait
+
+# make the samtools index
+
+cmd2="samtools faidx ${input_files}"
+
+srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+    --output="${log_file}" ${cmd2} &
+
+printf "[ %s: Waiting for samtools faidx to finish ]\n" "$(date)"
+FAIL=0
+fail_wait
+
+# log metadata
+metadata_file="${output_dirname}/fa_idx.METADATA.csv"
+printf "[ %s: Logging metadata ]\n" "$(date)"
+printf "metadata_file: %s\n" "${metadata_file}"
+cat <<- _EOF_ > ${metadata_file}
+  Script,${0}
+  branch,$(git rev-parse --abbrev-ref HEAD)
+  hash,$(git rev-parse HEAD)
+  date,$(date +%F)
+  samtools version,$(samtools --version | head -n 1)
+  picard-tools version,$(java -jar bin/picard.jar CreateSequenceDictionary \
+                            --version 2>&1)
+_EOF_
+
+printf "[ %s: Done ]\n" "$(date)"
+
+exit 0

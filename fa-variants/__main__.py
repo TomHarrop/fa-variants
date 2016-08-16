@@ -57,6 +57,18 @@ def main():
         output='data/genome/Osativa_323_v7.0.fa',
         extras=[jgi_logon, jgi_password])
 
+    # indexes
+    fa_idx = main_pipeline.transform(
+        name='fa_idx',
+        task_func=functions.generate_job_function(
+            job_script='src/sh/fa_idx',
+            job_name='fa_idx',
+            job_type='transform',
+            cpus_per_task=6),
+        input=ref_fa,
+        filter=ruffus.suffix(".fa"),
+        output=['.dict', '.fai'])
+
     # annotation
     annot = main_pipeline.originate(
         name='annot',
@@ -93,7 +105,8 @@ def main():
         add_inputs=ruffus.add_inputs(ref_fa),
         filter=ruffus.formatter(
             "output/mark_duplicates_and_sort/(?P<LIB>.+).deduped.bam"),
-        output=["{subdir[0][1]}/split_trim/{LIB[0]}.split.bam"])
+        output=["{subdir[0][1]}/split_trim/{LIB[0]}.split.bam"])\
+        .follows(fa_idx)
 
     ###################
     # RUFFUS COMMANDS #

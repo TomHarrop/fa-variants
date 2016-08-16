@@ -1,0 +1,7 @@
+  Script,src/sh/mark_duplicates_and_sort
+  branch,master
+  hash,c74383543840a7be16e0ab0f022785f781c686eb
+  date,2016-08-11
+  samtools version,samtools 1.3.1
+  picard-tools version,2.5.0-gradle-17-g960bc00-SNAPSHOT
+  output,output/mark_duplicates_and_sort

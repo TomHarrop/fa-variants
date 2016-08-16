@@ -43,6 +43,10 @@ for input_file in "${input_files[@]}"; do
         bam_file="${input_file}"
     elif printf "%s" "${input_file}" | grep -q "fa$"; then
         fasta_file="${input_file}"
+    elif printf "%s" "${input_file}" | grep -q "fai$"; then
+        printf "         fai: %s\n" "${input_file}"
+    elif printf "%s" "${input_file}" | grep -q "dict$"; then
+        printf "        dict: %s\n" "${input_file}"
     else
         printf "ERROR: %s not recognised\n" "${input_file}"
         exit 1
@@ -93,3 +97,7 @@ cat <<- _EOF_ > ${metadata_file}
                             --version 2>&1)
   output,${outdir}
 _EOF_
+
+printf "[ %s: Done ]\n" "$(date)"
+
+exit 0
