@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 #
 
-############################
-# Proforma ruffus pipeline #
-############################
+############################################
+# five accessions variant calling pipeline #
+############################################
 
 import functions
 import ruffus
@@ -106,7 +106,7 @@ def main():
             job_script='src/sh/split_trim',
             job_name='split_trim',
             job_type='transform',
-            cpus_per_task=1),
+            cpus_per_task=2),
         input=deduped,
         add_inputs=ruffus.add_inputs(ref_fa),
         filter=ruffus.formatter(

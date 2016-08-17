@@ -76,7 +76,7 @@ cmd="java -Xmx${java_ram} -jar ${gatk} \
         -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 \
         -U ALLOW_N_CIGAR_READS"
 
-printf "Final command line: %s\n" "${cmd//+( )/ }"
+printf "Final command line: %s\n" "${cmd//+( |$'\t'|$'\n')/ }"
 
 srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" ${cmd} &

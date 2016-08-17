@@ -11,6 +11,7 @@ import datetime
 #############
 
 
+# flatten list cf. `unlist()` in R
 def flatten_list(l):
     for x in l:
         if hasattr(x, '__iter__') and not isinstance(x, str):
