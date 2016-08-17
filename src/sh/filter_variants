@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+
+input_files=()
+output_files=""
+gatk="bin/GenomeAnalysisTK-3.6/GenomeAnalysisTK.jar"
+
+# parse options
+OPTIND=1
+if_n=0
+while getopts ":i:o:" opt; do
+    case "${opt}" in
+        i)  input_files[${if_n}]="${OPTARG}"
+            if_n=$((if_n + 1))
+            ;;
+        o)  output_files="${OPTARG}"
+            ;;
+        :)
+            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
+            exit 1
+            ;;
+        \?)
+            printf "Invalid option: -%s\n" "${OPTARG}" >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))"
+
+source "src/sh/bash_header"
+
+printf "[ %s: Filter variants ]\n" \
+       "$(date)"
+
+java_ram=$((max_cpus*3))"g"
+mrir=$((ram_limit/6000)) # max records in RAM
+
+# parse files from input
+for input_file in "${input_files[@]}"; do
+    case "${input_file##*.}" in
+        "vcf")
+                vcf_file="${input_file}"
+                ;;
+        "fa")
+                fasta_file="${input_file}"
+                ;;
+        *)
+                printf "Unrecognised input file: %s\n" "${input_file}" >&2
+                exit 1
+                ;;
+    esac
+done
+
+# make outdir
+outdir="$(dirname "${output_files}")"
+if [[ ! -d "${outdir}" ]]; then
+    mkdir -p "${outdir}"
+fi
+log_file="${outdir}/VariantFiltration.log"
+
+# check variables
+printf " input_files: %s\n" "${input_files[@]}"
+printf "output_files: %s\n" "${output_files}"
+printf "    vcf_file: %s\n" "${vcf_file}"
+printf "  fasta_file: %s\n" "${fasta_file}"
+printf "    log_file: %s\n" "${log_file}"
+
+# n.b. mistake on GATK website!!! can't have spaces in the filter expressions.
+fs='FS>30.0'
+qd='QD<2.0'
+
+cmd="java -Xmx${java_ram} -jar ${gatk} \
+        -T VariantFiltration \
+        --read_buffer_size ${mrir} \
+        --num_cpu_threads_per_data_thread ${max_cpus} \
+        -R ${fasta_file} -V ${vcf_file} \
+        -window 35 -cluster 3 \
+        -filterName FS -filter \"${fs}\" \
+        -filterName QD -filter \"${qd}\" \
+        -o ${output_files}"
+
+shopt -s extglob
+printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+shopt -u extglob
+
+# run VariantFiltration
+srun --ntasks=1 --cpus-per-task="${max_cpus}" \
+    --output="${log_file}" ${cmd} &
+
+printf "[ %s: Waiting for VariantFiltration to finish ]\n" "$(date)"
+FAIL=0
+fail_wait
+
+# log metadata
+metadata_file="${outdir}/filter_variants.METADATA.csv"
+
+printf "[ %s: Logging metadata ]\n" "$(date)"
+printf "metadata_file: %s\n" "${metadata_file}"
+cat <<- _EOF_ > "${metadata_file}"
+    Script,${0}
+    branch,$(git rev-parse --abbrev-ref HEAD)
+    hash,$(git rev-parse HEAD)
+    date,$(date +%F)
+    gatk version,$(java -jar ${gatk} --version 2>&1)
+    output,${outdir}
+_EOF_
+
+printf "[ %s: Done ]\n" "$(date)"
+
+exit 0
