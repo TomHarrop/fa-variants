@@ -36,7 +36,7 @@ printf "[ %s: Split and trim and reassign mapping qualities ]\n" \
        "$(date)"
 
 java_ram=$((max_cpus*3))"g"
-mrir=$((ram_limit/6000)) # max records in RAM
+mrir=$((ram_limit/8000)) # max records in RAM
 
 # parse fasta file from input
 for input_file in "${input_files[@]}"; do
