@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 input_files=()
+bam_files=()
 output_files=""
 gatk="bin/GenomeAnalysisTK-3.6/GenomeAnalysisTK.jar"
 
@@ -28,67 +29,71 @@ shift "$((OPTIND-1))"
 
 source "src/sh/bash_header"
 
-###############
-# CODE STARTS #
-###############
-
-printf "[ %s: Split and trim and reassign mapping qualities ]\n" \
+printf "[ %s: Call variants ]\n" \
        "$(date)"
 
 java_ram=$((max_cpus*3))"g"
 mrir=$((ram_limit/6000)) # max records in RAM
 
-# parse fasta file from input
+# parse files from input
+bf_n=0
 for input_file in "${input_files[@]}"; do
-    if printf "%s" "${input_file}" | grep -q "bam$"; then
-        bam_file="${input_file}"
-    elif printf "%s" "${input_file}" | grep -q "fa$"; then
-        fasta_file="${input_file}"
-    elif printf "%s" "${input_file}" | grep -q "fai$"; then
-        printf "         fai: %s\n" "${input_file}"
-    elif printf "%s" "${input_file}" | grep -q "dict$"; then
-        printf "        dict: %s\n" "${input_file}"
-    else
-        printf "ERROR: %s not recognised\n" "${input_file}"
-        exit 1
-    fi
+    case "${input_file##*.}" in
+        "bam")
+                bam_files[${bf_n}]="${input_file}"
+                bf_n=$((bf_n + 1))
+                ;;
+        "fa")
+                fasta_file="${input_file}"
+                ;;
+        *)
+                printf "Unrecognised input file: %s\n" "${input_file}" >&2
+                exit 1
+                ;;
+    esac
 done
 
 # make outdir
-outdir="output/split_trim"
+outdir="$(dirname "${output_files}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
-bn="$(basename "${bam_file}" .deduped.bam)"
-log_file="${outdir}/${bn}.log"
+log_file="${outdir}/HaplotypeCaller.log"
 
 # check variables
 printf " input_files: %s\n" "${input_files[@]}"
 printf "output_files: %s\n" "${output_files}"
-printf "    bam_file: %s\n" "${bam_file}"
+printf "    bam_file: %s\n" "${bam_files[@]}"
 printf "  fasta_file: %s\n" "${fasta_file}"
 printf "    log_file: %s\n" "${log_file}"
 
+# expand bam_files array to a single string
+bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
+
 cmd="java -Xmx${java_ram} -jar ${gatk} \
-        --bam_compression 9 --maxReadsInMemory ${mrir} \
-        -T SplitNCigarReads \
-        -R ${fasta_file} -I ${bam_file} -o ${output_files} \
-        -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 \
-        -U ALLOW_N_CIGAR_READS"
+        -T HaplotypeCaller \
+        --read_buffer_size ${mrir} \
+        --num_cpu_threads_per_data_thread ${max_cpus} \
+        -R ${fasta_file} ${bam_files_arg} \
+        -dontUseSoftClippedBases -stand_call_conf 20.0 \
+        -stand_emit_conf 20.0 \
+        -o ${output_files}"
 
 shopt -s extglob
 printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
 shopt -u extglob
 
-srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+# run HaplotypeCaller
+srun --ntasks=1 --cpus-per-task="${max_cpus}" \
     --output="${log_file}" ${cmd} &
 
-printf "[ %s: Waiting for SplitNCigarReads to finish ]\n" "$(date)"
+printf "[ %s: Waiting for HaplotypeCaller to finish ]\n" "$(date)"
 FAIL=0
 fail_wait
 
 # log metadata
-metadata_file="${outdir}/${bn}.METADATA.csv"
+metadata_file="${outdir}/call_variants.METADATA.csv"
+
 printf "[ %s: Logging metadata ]\n" "$(date)"
 printf "metadata_file: %s\n" "${metadata_file}"
 cat <<- _EOF_ > "${metadata_file}"

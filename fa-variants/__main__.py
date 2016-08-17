@@ -114,6 +114,42 @@ def main():
         output=["{subdir[0][1]}/split_trim/{LIB[0]}.split.bam"])\
         .follows(fa_idx)
 
+
+    # we're going to recycle call_variants and filter_variants, so let's get
+    # the functions in advance
+    call_variants = functions.generate_job_function(
+        job_script='src/sh/call_variants',
+        job_name='call_variants',
+        job_type='merge',
+        cpus_per_task=8)
+    filter_variants = functions.generate_job_function(
+        job_script='src/sh/filter_variants',
+        job_name='filter_variants',
+        job_type='transform',
+        cpus_per_task=8)
+
+    # call variants without recalibration tables
+    uncalibrated_variants = main_pipeline.merge(
+        name='uncalibrated_variants',
+        task_func=call_variants,
+        input=[split_and_trimmed, ref_fa],
+        output='output/variants_uncalibrated/variants_uncalibrated.vcf')
+
+    # filter variants on un-corrected bamfiles
+    uncalibrated_variants_filtered = main_pipeline.transform(
+        name='uncalibrated_variants_filtered',
+        task_func=filter_variants,
+        input=uncalibrated_variants,
+        add_inputs=ruffus.add_inputs(ref_fa),
+        filter=ruffus.suffix('_uncalibrated.vcf'),
+        output='_uncalibrated_filtered.vcf')
+
+    # recalibrate bases using filtered variants
+
+    # call variants
+
+    # filter variants
+
     ###################
     # RUFFUS COMMANDS #
     ###################
