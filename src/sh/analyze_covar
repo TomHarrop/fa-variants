@@ -80,7 +80,6 @@ cmd="java -Xmx${java_ram} -jar ${gatk} \
         --num_cpu_threads_per_data_thread ${max_cpus} \
         -R ${fasta_file} -I ${bam_file} \
         -knownSites ${vcf_file} \
-        -L 20 \
         -o ${output_files}"
 
 if [[ "${pass_no}" == "Second" ]]; then
