@@ -71,7 +71,6 @@ qd='QD<2.0'
 cmd="java -Xmx${java_ram} -jar ${gatk} \
         -T VariantFiltration \
         --read_buffer_size ${mrir} \
-        --num_threads ${max_cpus} \
         -R ${fasta_file} -V ${vcf_file} \
         -window 35 -cluster 3 \
         -filterName FS -filter \"${fs}\" \
