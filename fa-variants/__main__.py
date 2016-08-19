@@ -114,9 +114,8 @@ def main():
         output=["{subdir[0][1]}/split_trim/{LIB[0]}.split.bam"])\
         .follows(fa_idx)
 
-
-    # we're going to recycle call_variants and filter_variants, so let's get
-    # the functions in advance
+    # we're going to recycle call_variants, filter_variants and analyze_covar
+    # so we'll get the functions in advance
     call_variants = functions.generate_job_function(
         job_script='src/sh/call_variants',
         job_name='call_variants',
@@ -126,7 +125,12 @@ def main():
         job_script='src/sh/filter_variants',
         job_name='filter_variants',
         job_type='transform',
-        cpus_per_task=7)
+        cpus_per_task=1)
+    analyze_covar = functions.generate_job_function(
+        job_script='src/sh/analyze_covar',
+        job_name='analyze_covar',
+        job_type='transform',
+        cpus_per_task=2)
 
     # call variants without recalibration tables
     uncalibrated_variants = main_pipeline.merge(
@@ -144,7 +148,17 @@ def main():
         filter=ruffus.suffix('_uncalibrated.vcf'),
         output='_uncalibrated_filtered.vcf')
 
-    # recalibrate bases using filtered variants
+    # create recalibration report with filtered variants
+    covar_report = main_pipeline.transform(
+        name='covar_report',
+        task_func=analyze_covar,
+        input=split_and_trimmed,
+        add_inputs=ruffus.add_inputs(ref_fa, uncalibrated_variants_filtered),
+        filter=ruffus.formatter(
+            "output/split_trim/(?P<LIB>.+).split.bam"),
+        output=["{subdir[0][1]}/covar_analysis/{LIB[0]}.recal_data.table"])
+
+    # recalibrate bases using recalibration report
 
     # call variants
 

@@ -195,7 +195,7 @@ def generate_job_function(
         # did we use everything?
         if verbose:
             print("\nsubmit_args: ", submit_args)
-            print("end_fal: ", function_args_list)
+            print("remaining function_args_list: ", function_args_list)
 
         if len(function_args_list) > 0:
             raise ValueError('unused function_args_list')
