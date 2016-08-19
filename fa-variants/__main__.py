@@ -129,8 +129,8 @@ def main():
     analyze_covar = functions.generate_job_function(
         job_script='src/sh/analyze_covar',
         job_name='analyze_covar',
-        job_type='transform',
-        cpus_per_task=2)
+        job_type='merge',
+        cpus_per_task=7)
 
     # call variants without recalibration tables
     uncalibrated_variants = main_pipeline.merge(
@@ -149,36 +149,30 @@ def main():
         output='_uncalibrated_filtered.vcf')
 
     # create recalibration report with filtered variants
-    covar_report = main_pipeline.transform(
+    covar_report = main_pipeline.merge(
         name='covar_report',
         task_func=analyze_covar,
-        input=split_and_trimmed,
-        add_inputs=ruffus.add_inputs(ref_fa, uncalibrated_variants_filtered),
-        filter=ruffus.formatter(
-            "output/split_trim/(?P<LIB>.+).split.bam"),
-        output=["{subdir[0][1]}/covar_analysis/{LIB[0]}.recal_data.table"])
+        input=[split_and_trimmed, ref_fa, uncalibrated_variants_filtered],
+        output="output/covar_analysis/recal_data.table")
 
-    # second pass to analyze covariation remaining after recalibration    
-    second_pass_covar_report = main_pipeline.collate(
+    # second pass to analyze covariation remaining after recalibration
+    second_pass_covar_report = main_pipeline.merge(
         name='second_pass_covar_report',
         task_func=analyze_covar,
-        input=[split_and_trimmed, covar_report],
-        add_inputs=ruffus.add_inputs(ref_fa, uncalibrated_variants_filtered),
-        filter=ruffus.regex(r"output/.*/(\w+).*"),
-        output=r"output/covar_analysis/\1.post_recal_data.table")
+        input=[split_and_trimmed, ref_fa,
+               uncalibrated_variants_filtered, covar_report],
+        output="output/covar_analysis/post_recal_data.table")
 
     # plot effect of base recalibration
-    recal_plot = main_pipeline.collate(
+    recal_plot = main_pipeline.merge(
         name='recal_plot',
         task_func=functions.generate_job_function(
             job_script='src/sh/recal_plot',
             job_name='recal_plot',
-            job_type='transform',
+            job_type='merge',
             cpus_per_task=1),
-        input=[covar_report, second_pass_covar_report],
-        add_inputs=ruffus.add_inputs(ref_fa),
-        filter=ruffus.regex(r"output/covar_analysis/(\w+).*"),
-        output=r"output/covar_analysis/\1.recalibration_plots.pdf")
+        input=[covar_report, second_pass_covar_report, ref_fa],
+        output="output/covar_analysis/recalibration_plots.pdf")
 
     # recalibrate bases using recalibration report
 

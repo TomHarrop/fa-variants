@@ -31,24 +31,27 @@ source "src/sh/bash_header"
 java_ram=$((max_cpus*3))"g"
 mrir=$((ram_limit/6000)) # max records in RAM
 
-# parse files from input
-pass_no="First"
-bf_n=0
+# parse files from input. Have to nest this to get the fasta file and the
+# tables separately
 for input_file in "${input_files[@]}"; do
     case "${input_file##*.}" in
-        "bam")
-                bam_files[${bf_n}]="${input_file}"
-                bf_n=$((bf_n + 1))
-                ;;
         "fa")
                 fasta_file="${input_file}"
                 ;;
-        "vcf")
-                vcf_file="${input_file}"
-                ;;
         "table")
-                first_pass_table="${input_file}"
-                pass_no="Second"
+                case "${input_file##*/}" in
+                    "recal_data.table")
+                            before_table="${input_file}"
+                            ;;
+                    "post_recal_data.table")
+                            after_table="${input_file}"
+                            ;;
+                    *)
+                            printf "Unrecognised table file: %s\n" \
+                                "${input_file}" >&2
+                            exit 1
+                            ;;
+                esac
                 ;;
         *)
                 printf "Unrecognised input file: %s\n" "${input_file}" >&2
@@ -57,53 +60,44 @@ for input_file in "${input_files[@]}"; do
     esac
 done
 
-printf "[ %s: %s-pass covariation analysis ]\n" \
-       "$(date)" "${pass_no}"
+printf "[ %s: Plot base recalibration results ]\n" \
+       "$(date)"
 
 # make outdir
 outdir="$(dirname "${output_files}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
-log_file="${outdir}/BaseRecalibrator.${pass_no}.log"
+log_file="${outdir}/AnalyzeCovariates.log"
 
 # check variables
 printf "     input_files: %s\n" "${input_files[@]}"
 printf "    output_files: %s\n" "${output_files}"
-printf "        bam_file: %s\n" "${bam_files[@]}"
-printf "        vcf_file: %s\n" "${vcf_file}"
 printf "      fasta_file: %s\n" "${fasta_file}"
+printf "    before_table: %s\n" "${before_table}"
+printf "     after_table: %s\n" "${after_table}"
 printf "        log_file: %s\n" "${log_file}"
 
-bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
-
 cmd="java -Xmx${java_ram} -jar ${gatk} \
-        -T BaseRecalibrator \
-        --read_buffer_size ${mrir} \
-        --num_cpu_threads_per_data_thread ${max_cpus} \
-        -R ${fasta_file} ${bam_files_arg} \
-        -knownSites ${vcf_file} \
-        -o ${output_files}"
-
-if [[ "${pass_no}" == "Second" ]]; then
-    printf "first_pass_table: %s\n" "${first_pass_table}"
-    cmd="${cmd} -BQSR ${first_pass_table}"
-fi
+        -T AnalyzeCovariates \
+        -R ${fasta_file} \
+        -before ${before_table} -after ${after_table} \
+        -plots ${output_files}"
 
 shopt -s extglob
 printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
 shopt -u extglob
 
 # run BaseRecalibrator
-srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+echo srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" ${cmd} &
 
-printf "[ %s: Waiting for BaseRecalibrator to finish ]\n" "$(date)"
+printf "[ %s: Waiting for AnalyzeCovariates to finish ]\n" "$(date)"
 FAIL=0
 fail_wait
 
 # log metadata
-metadata_file="${outdir}/BaseRecalibrator.${pass_no}.METADATA.csv"
+metadata_file="${outdir}/AnalyzeCovariates.METADATA.csv"
 
 printf "[ %s: Logging metadata ]\n" "$(date)"
 printf "metadata_file: %s\n" "${metadata_file}"
