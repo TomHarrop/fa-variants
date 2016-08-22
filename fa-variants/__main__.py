@@ -164,15 +164,17 @@ def main():
         output="output/covar_analysis/post_recal_data.table")
 
     # plot effect of base recalibration
-    recal_plot = main_pipeline.merge(
+    recal_plot = main_pipeline.transform(
         name='recal_plot',
         task_func=functions.generate_job_function(
-            job_script='src/sh/recal_plot',
+            job_script='src/R/recal_plot.R',
             job_name='recal_plot',
-            job_type='merge',
+            job_type='transform',
             cpus_per_task=1),
-        input=[covar_report, second_pass_covar_report, ref_fa],
-        output="output/covar_analysis/recalibration_plots.pdf")
+        input=second_pass_covar_report,
+        filter=ruffus.suffix('post_recal_data.table'),
+        add_inputs=ruffus.add_inputs(covar_report),
+        output='recalibration_plots.pdf')
 
     # recalibrate bases using recalibration report
 
