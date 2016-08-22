@@ -7,7 +7,9 @@ library(ggplot2)
 GenerateMessage <- function(message.text){
   message(paste0("[ ", date(), " ]: ", message.text))
 }
-printf <- function(...) { cat(sprintf(...)) }
+printf <- function(...) {
+  cat(sprintf(...), file = stderr())
+}
 
 # parse arguments (make this a package later)
 ParseCli <- function(command.args) {
@@ -62,7 +64,7 @@ before.table.file <- grep(
 plot.output.file <- grep(
   ".pdf$", parsed.args$output.files, value = TRUE)
 log.file <- paste(dirname(plot.output.file),
-                  "recal_plot.SessionInfo.txt",
+                  "SessionInfo.recal_plot.txt",
                   sep = "/")
 
 # read tables into R
