@@ -88,8 +88,8 @@ shopt -s extglob
 printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
 shopt -u extglob
 
-# run BaseRecalibrator
-echo srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+# run AnalyzeCovariates
+srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" ${cmd} &
 
 printf "[ %s: Waiting for AnalyzeCovariates to finish ]\n" "$(date)"
