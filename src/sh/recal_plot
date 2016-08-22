@@ -88,7 +88,9 @@ shopt -s extglob
 printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
 shopt -u extglob
 
-# run AnalyzeCovariates
+# run AnalyzeCovariates. This will fail without some required R packages that
+# aren't listed, including reshape, gplots and one other. Run with -l DEBUG to
+# see which packages are missing.
 srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" ${cmd} &
 

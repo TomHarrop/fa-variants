@@ -1,0 +1,6 @@
+    Script,src/sh/recal_plot
+    branch,master
+    hash,43ec701b33a7ffd3934857175bd901e6108e7c87
+    date,2016-08-22
+    gatk version,3.6-0-g89b7209
+    output,output/covar_analysis
