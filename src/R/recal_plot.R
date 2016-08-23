@@ -51,9 +51,6 @@ GenerateMessage(paste(
 
 # parse CLI
 command.args = commandArgs(trailingOnly=TRUE)
-# command.args=c("-i", "output/covar_analysis/post_recal_data.table",
-#                "-i", "output/covar_analysis/recal_data.table",
-#                "-o", "output/covar_analysis/recalibration_plots.pdf")
 parsed.args <- ParseCli(command.args)
 
 # get before and after tables from input.files

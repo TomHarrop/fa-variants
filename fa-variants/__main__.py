@@ -189,9 +189,21 @@ def main():
         filter=ruffus.formatter('output/split_trim/(?P<LIB>.+).split.bam'),
         output='{subdir[0][1]}/recal/{LIB[0]}.recal.bam')
 
-    # call variants
+    # final variant calling
+    variants = main_pipeline.merge(
+        name='variants',
+        task_func=call_variants,
+        input=[recalibrated, ref_fa],
+        output='output/variants/variants.vcf')
 
-    # filter variants
+    # variant filtering
+    variants_filtered = main_pipeline.transform(
+        name='variants_filtered',
+        task_func=filter_variants,
+        input=variants,
+        add_inputs=ruffus.add_inputs(ref_fa),
+        filter=ruffus.suffix('.vcf'),
+        output='_filtered.vcf')
 
     ###################
     # RUFFUS COMMANDS #

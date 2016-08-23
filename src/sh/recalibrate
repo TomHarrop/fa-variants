@@ -73,7 +73,7 @@ printf "        log_file: %s\n" "${log_file}"
 
 cmd="java -Xmx${java_ram} -jar ${gatk} \
         -T PrintReads \
-        --read_buffer_size ${mrir} \
+        --bam_compression 9 --read_buffer_size ${mrir} \
         --num_cpu_threads_per_data_thread ${max_cpus} \
         -R ${fasta_file}  \
         -I ${bam_file} \
