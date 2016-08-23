@@ -11,47 +11,21 @@ printf <- function(...) {
   cat(sprintf(...), file = stderr())
 }
 
-# parse arguments (make this a package later)
-ParseCli <- function(command.args) {
-  accepted.switches <- c("-i", "-o")
-  input.files <- c()
-  output.files <- c()
-  switch.i <- grep("^-", command.args)
-  for (i in switch.i) {
-    # check for option starting with "-"
-    if (!grepl("^-", command.args[[i]])) {
-      break
-      
-      # check for expected option
-    } else if (!command.args[[i]] %in% accepted.switches) {
-      stop(paste("Invalid option:", command.args[[i]]))
-      
-      # check for empty argument
-    } else if (i + 1 > length(command.args)) {
-      stop(paste("Option", command.args[[i]], "requires an argument"))
-    } else if (grepl("^-", command.args[[i + 1]])) {
-      stop(paste("Option", command.args[[i]], "requires an argument"))
-    } else if (command.args[[i + 1]] == "") {
-      stop(paste("Option", command.args[[i]], "requires an argument"))
-      
-      # do parsing
-    } else if (command.args[[i]] == "-i") {
-      input.files <- c(input.files, command.args[[i + 1]])
-    } else if (command.args[[i]] == "-o") {
-      output.files <- c(output.files, command.args[[i + 1]])
-    }
-  }
-  list(input.files = input.files, output.files = output.files)
-}
-
 GenerateMessage(paste(
   "Plot results of base recalibration to match GATK site",
   "http://gatkforums.broadinstitute.org/gatk/discussion/44/base-quality-score-recalibration-bqsr",
   sep = "\n"))
 
 # parse CLI
-command.args = commandArgs(trailingOnly=TRUE)
-parsed.args <- ParseCli(command.args)
+command.args <- commandArgs(trailingOnly = TRUE)
+# command.args <- c("-i", "output/covar_analysis/post_recal_data.table",
+#                   "-i", "output/covar_analysis/recal_data.table",
+#                   "-o", "test/out.pdf")
+parsed.args <- argparsR::ParseArguments(
+  accepted.switches = list(
+    `output.files` = "-o", `input.files` = "-i"),
+  command.args)
+
 
 # get before and after tables from input.files
 after.table.file <- grep(
@@ -99,10 +73,26 @@ cycle.table[, CovariateValue := as.numeric(as.character(CovariateValue))]
 
 
 nt <- c("A", "T", "C", "G")
-di.nt <- paste0(expand.grid(nt, nt)[,1], expand.grid(nt, nt)[,2 ])
-dinuc.table <- covariate.table[CovariateName == "Context" & 
+di.nt <- paste0(expand.grid(nt, nt)[, 1], expand.grid(nt, nt)[, 2])
+dinuc.table <- covariate.table[CovariateName == "Context" &
                                  CovariateValue %in% di.nt]
 
+# set up scale
+obs.formatter <- function(x) {
+  # decimal and exponential component
+  dc <- as.numeric(gsub("^(.+)e.*", "\\1", x))
+  ec <- as.numeric(gsub(".*e\\+0?", "", x))
+
+  # NAs and zeros
+  na.lab <- unique(c(which(is.na(dc)), which (is.na(ec))))
+  zero.lab <- which(dc == 0)
+
+  raw.lab <- paste0(dc, "%*%10^", ec)
+  raw.lab[na.lab] <- NA
+  raw.lab[zero.lab] <- 0
+
+  parse(text = raw.lab)
+  }
 
 # 1. Reported quality vs. empirical quality
 GenerateMessage("Reported quality vs. empirical quality")
@@ -113,12 +103,12 @@ p1 <- ggplot(quality.score.table,
   xlab("Reported quality score") +
   ylab("Empirical quality score") +
   ggtitle("Reported vs. empirical quality") +
-  facet_grid(ReadGroup ~ EventType + analysis) +
+  facet_grid(EventType ~ ReadGroup + analysis) +
   geom_abline(slope = 1, intercept = 0, linetype = 2,
               colour = alpha("black", 0.5)) +
   geom_point(alpha = 0.75) +
-  scale_size_area() +
-  scale_color_brewer(palette = "Set1")
+  scale_size_area(labels = obs.formatter) +
+  scale_color_brewer(palette = "Set1", guide = FALSE)
 
 # 2. Distribution of quality scores
 GenerateMessage("Distribution of quality scores")
@@ -128,10 +118,11 @@ p2 <- ggplot(quality.score.table,
   theme_bw() +
   xlab("Reported quality score") +
   ggtitle("Distribution of quality scores") +
-  facet_grid(ReadGroup ~ EventType + analysis) +
+  facet_grid(ReadGroup + EventType ~ analysis) +
   geom_density(stat = "identity", alpha = 0.5) +
   scale_color_brewer(palette = "Set1", guide = FALSE) +
-  scale_fill_brewer(palette = "Set1")
+  scale_fill_brewer(palette = "Set1", guide = FALSE) +
+  scale_y_continuous(labels = obs.formatter)
 
 # 3. Residual error by machine cycle
 GenerateMessage("Residual error by machine cycle")
@@ -145,8 +136,8 @@ p3 <- ggplot(cycle.table,
   ggtitle("Residual error by machine cycle") +
   geom_point() +
   geom_point(size = 0.5, alpha = 0.5) +
-  scale_size_area() +
-  scale_color_brewer(palette = "Set1")
+  scale_size_area(labels = obs.formatter) +
+  scale_color_brewer(palette = "Set1", guide = FALSE)
 
 # 4. Residual error by dinucleotide
 GenerateMessage("Residual error by dinucleotide")
@@ -165,7 +156,12 @@ p4 <- ggplot(dinuc.pd,
 # save output
 GenerateMessage("Writing plots to file")
 printf(" plot.output.file: %s\n", plot.output.file)
-pdf(plot.output.file, width = 10, height= 7.5)
+outdir <- dirname(plot.output.file)
+if (!dir.exists(outdir)) {
+  dir.create(outdir, recursive = TRUE)
+}
+
+pdf(plot.output.file, width = 10, height = 7.5)
 print(p1)
 print(p2)
 print(p3)
@@ -176,9 +172,10 @@ dev.off()
 GenerateMessage("Logging SessionInfo")
 printf("         log.file: %s\n", log.file)
 
-sInf <- c(paste("git branch:",system("git rev-parse --abbrev-ref HEAD",
+sInf <- c(paste("git branch:", system("git rev-parse --abbrev-ref HEAD",
                                      intern = TRUE)),
           paste("git hash:", system("git rev-parse HEAD", intern = TRUE)),
+          paste("date:", date()),
           capture.output(sessionInfo()))
 writeLines(sInf, log.file)
 
