@@ -32,17 +32,11 @@ log_file="${outdir}/gtf2bed.log"
 printf "[ %s: Convert gtf to bed ]\n" "$(date)"
 
 # check variables
-printf "     input_files: %s\n" "${input_files[@]}"
-printf "    output_files: %s\n" "${output_files[@]}"
-printf "        log_file: %s\n" "${log_file[@]}"
+printf "     input_files: %s\n" "${input_files}"
+printf "    output_files: %s\n" "${output_files}"
+printf "        log_file: %s\n" "${log_file}"
 
 export PATH=$PATH:bin/bedops
-
-
-
-# shopt -s extglob
-# printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
-# shopt -u extglob
 
 srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${output_files}" \
