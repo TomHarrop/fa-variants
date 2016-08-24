@@ -77,20 +77,21 @@ bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
 cmd="java -Xmx${java_ram} -jar ${gatk} \
         -T HaplotypeCaller \
         --read_buffer_size ${mrir} \
-        --num_cpu_threads_per_data_thread ${max_cpus} \
         -R ${fasta_file} -L ${bed_file} --interval_padding 100 \
         ${bam_files_arg} \
         -dontUseSoftClippedBases -stand_call_conf 20.0 \
         -stand_emit_conf 20.0 \
         -o ${output_files}"
 
+# --num_cpu_threads_per_data_thread ${max_cpus} \
+
 shopt -s extglob
 printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
 shopt -u extglob
 
 # run HaplotypeCaller
-srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
-    --output="${log_file}" ${cmd} &
+srun --ntasks=1 --output="${log_file}" ${cmd} &
+# --cpus-per-task="${max_cpus}" --exclusive 
 
 printf "[ %s: Waiting for HaplotypeCaller to finish ]\n" "$(date)"
 FAIL=0
