@@ -1,0 +1,6 @@
+    Script,src/sh/call_variants
+    branch,master
+    hash,c908c50e9f06f0a767c095baebd89aaf8cbdecc2
+    date,2016-08-24
+    gatk version,3.6-0-g89b7209
+    output,output/variants

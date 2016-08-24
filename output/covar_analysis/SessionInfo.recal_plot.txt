@@ -1,5 +1,6 @@
 git branch: master
-git hash: 7b18732d51c0e30015ac5a6ab0a4b1a362cbdd56
+git hash: c908c50e9f06f0a767c095baebd89aaf8cbdecc2
+date: Wed Aug 24 11:06:16 2016
 R version 3.3.1 (2016-06-21)
 Platform: x86_64-pc-linux-gnu (64-bit)
 Running under: Ubuntu 16.04.1 LTS
@@ -23,4 +24,4 @@ loaded via a namespace (and not attached):
  [5] plyr_1.8.4         gtable_0.2.0       magrittr_1.5       scales_0.4.0      
  [9] stringi_1.1.1      reshape2_1.4.1     gsalib_2.1         labeling_0.3      
 [13] RColorBrewer_1.1-2 tools_3.3.1        stringr_1.1.0      munsell_0.4.3     
-[17] colorspace_1.2-6   methods_3.3.1     
+[17] argparsR_0.1.0     colorspace_1.2-6   methods_3.3.1     

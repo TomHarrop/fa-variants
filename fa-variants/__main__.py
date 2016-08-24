@@ -43,15 +43,20 @@ def main():
     raw_files = [x.path for x in os.scandir('data/bam') if
                  x.name.endswith('.bam') and x.is_file]
 
-    # subset the files while the pipeline is in development
-    raw_files_subset = [x for x in raw_files if
+    # subset the files while the pipeline is in development. Make this equal
+    # to the raw_files to run the whole pipline.
+    active_raw_files = [x for x in raw_files if
                         'G1' in x or 'G4' in x or 'J1' in x or 'J4' in x]
+
+    # species short names for vcf splitting
+    species_short_names = list(set(
+        [os.path.basename(x)[0] for x in active_raw_files]))
 
     # check that the files exist
     mapped_raw = main_pipeline.originate(
         name='mapped_raw',
         task_func=os.path.isfile,
-        output=raw_files_subset)  # subset speficied here
+        output=active_raw_files)
 
     # genome fasta
     ref_fa = main_pipeline.originate(
@@ -204,6 +209,20 @@ def main():
         add_inputs=ruffus.add_inputs(ref_fa),
         filter=ruffus.suffix('.vcf'),
         output='_filtered.vcf')
+
+    # variants by species
+    split_variants = main_pipeline.subdivide(
+        name='split_variants',
+        task_func=functions.generate_job_function(
+            job_script='src/sh/split_variants',
+            job_name='split_variants',
+            job_type='transform',
+            cpus_per_task=8),
+        input=variants_filtered,
+        filter=ruffus.formatter(),
+        add_inputs=ruffus.add_inputs(ref_fa),
+        output=[('output/split_variants/' + x + '.variants_filtered.vcf')
+                for x in species_short_names])
 
     ###################
     # RUFFUS COMMANDS #

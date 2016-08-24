@@ -7,12 +7,14 @@ gatk="bin/GenomeAnalysisTK-3.6/GenomeAnalysisTK.jar"
 # parse options
 OPTIND=1
 if_n=0
+of_n=0
 while getopts ":i:o:" opt; do
     case "${opt}" in
         i)  input_files[${if_n}]="${OPTARG}"
             if_n=$((if_n + 1))
             ;;
-        o)  output_files="${OPTARG}"
+        o)  output_files[${of_n}]="${OPTARG}"
+            of_n=$((of_n + 1))
             ;;
         :)
             printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
@@ -27,23 +29,17 @@ done
 shift "$((OPTIND-1))"
 
 source "src/sh/bash_header"
-
 java_ram=$((max_cpus*3))"g"
 mrir=$((ram_limit/6000)) # max records in RAM
 
 # parse files from input
-pass_no="First"
 for input_file in "${input_files[@]}"; do
     case "${input_file##*.}" in
-        "bam")
-                bam_file="${input_file}"
+        "vcf")
+                vcf_file="${input_file}"
                 ;;
         "fa")
                 fasta_file="${input_file}"
-                ;;
-        "table")
-                recal_report="${input_file}"
-                pass_no="Second"
                 ;;
         *)
                 printf "Unrecognised input file: %s\n" "${input_file}" >&2
@@ -52,47 +48,52 @@ for input_file in "${input_files[@]}"; do
     esac
 done
 
-printf "[ %s: Base quality recalibration ]\n" "$(date)"
+printf "[ %s: Split variants by species ]\n" "$(date)"
 
 # make outdir
 outdir="$(dirname "${output_files}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
-bn="$(basename "${output_files}" ".recal.bam")"
-log_file="${outdir}/${bn}.PrintReads.log"
 
 # check variables
 printf "     input_files: %s\n" "${input_files[@]}"
-printf "    output_files: %s\n" "${output_files}"
-printf "        bam_file: %s\n" "${bam_file}"
+printf "    output_files: %s\n" "${output_files[@]}"
+printf "        vcf_file: %s\n" "${vcf_file}"
 printf "      fasta_file: %s\n" "${fasta_file}"
-printf "    recal_report: %s\n" "${recal_report}"
-printf "        log_file: %s\n" "${log_file}"
 
-cmd="java -Xmx${java_ram} -jar ${gatk} \
-        -T PrintReads \
-        --bam_compression 9 --read_buffer_size ${mrir} \
-        --num_cpu_threads_per_data_thread ${max_cpus} \
-        -R ${fasta_file}  \
-        -I ${bam_file} \
-        -BQSR ${recal_report} \
-        -o ${output_files}"
+# run one SelectVariants command per output_file
+for species_file in "${output_files[@]}"; do
+    species_prefix="$(basename "${species_file}" ".variants_filtered.vcf")"
+    log_file="${outdir}/${species_prefix}.SelectVariants.log"
+    grep_query="^${species_prefix}.*"
 
-shopt -s extglob
-printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
-shopt -u extglob
+    printf "\n  species_prefix: %s\n" "${species_prefix}"
+    printf "        log_file: %s\n" "${log_file}"
+    
 
-# run PrintReads
-srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+    cmd="java -Xmx${java_ram} -jar ${gatk} \
+        -T SelectVariants \
+        --read_buffer_size ${mrir} --num_threads ${max_cpus}\
+        -R ${fasta_file} -V ${vcf_file} \
+        -o ${species_file} \
+        -se $(printf "\'%s\'" "${grep_query}") \
+        --excludeNonVariants --removeUnusedAlternates"
+
+    shopt -s extglob
+    printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+    shopt -u extglob
+
+    srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" ${cmd} &
+done
 
-printf "[ %s: Waiting for PrintReads to finish ]\n" "$(date)"
+printf "[ %s: Waiting for SelectVariants to finish ]\n" "$(date)"
 FAIL=0
 fail_wait
 
 # log metadata
-metadata_file="${outdir}/${bn}.PrintReads.METADATA.csv"
+metadata_file="${outdir}/SelectVariants.METADATA.csv"
 
 printf "[ %s: Logging metadata ]\n" "$(date)"
 printf "metadata_file: %s\n" "${metadata_file}"
