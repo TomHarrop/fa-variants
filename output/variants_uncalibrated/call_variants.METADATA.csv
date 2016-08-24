@@ -1,6 +1,0 @@
-    Script,src/sh/call_variants
-    branch,master
-    hash,23c781153059ebcc6683dcbc96934eb733debb48
-    date,2016-08-19
-    gatk version,3.6-0-g89b7209
-    output,output/variants_uncalibrated

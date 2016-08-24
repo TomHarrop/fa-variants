@@ -67,7 +67,7 @@ log_file="${outdir}/HaplotypeCaller.log"
 printf " input_files: %s\n" "${input_files[@]}"
 printf "output_files: %s\n" "${output_files}"
 printf "    bam_file: %s\n" "${bam_files[@]}"
-printf "    bed_file: %s\n" "${vcf_file}"
+printf "    bed_file: %s\n" "${bed_file}"
 printf "  fasta_file: %s\n" "${fasta_file}"
 printf "    log_file: %s\n" "${log_file}"
 

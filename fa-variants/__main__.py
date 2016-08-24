@@ -98,7 +98,7 @@ def main():
             job_script='src/sh/annot_bed',
             job_name='annot_bed',
             job_type='transform',
-            cpus_per_task=8),
+            cpus_per_task=7),
         input=annot,
         filter=ruffus.suffix('.gtf'),
         output='.bed')
@@ -137,7 +137,7 @@ def main():
         job_script='src/sh/call_variants',
         job_name='call_variants',
         job_type='merge',
-        cpus_per_task=7)
+        cpus_per_task=8)
     filter_variants = functions.generate_job_function(
         job_script='src/sh/filter_variants',
         job_name='filter_variants',
@@ -147,7 +147,7 @@ def main():
         job_script='src/sh/analyze_covar',
         job_name='analyze_covar',
         job_type='merge',
-        cpus_per_task=7)
+        cpus_per_task=8)
 
     # call variants without recalibration tables
     uncalibrated_variants = main_pipeline.merge(

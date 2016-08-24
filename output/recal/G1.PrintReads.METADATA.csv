@@ -1,6 +1,0 @@
-    Script,src/sh/recalibrate
-    branch,master
-    hash,6a7df5478bb43a390c8f5a2f6d6d8ffe5ad35b3c
-    date,2016-08-22
-    gatk version,3.6-0-g89b7209
-    output,output/recal
