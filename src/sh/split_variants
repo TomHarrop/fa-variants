@@ -84,7 +84,7 @@ for species_file in "${output_files[@]}"; do
     shopt -u extglob
 
     srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
-    --output="${log_file}" ${cmd} &
+        --output="${log_file}" ${cmd} &
 done
 
 printf "[ %s: Waiting for SelectVariants to finish ]\n" "$(date)"

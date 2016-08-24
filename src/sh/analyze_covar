@@ -46,6 +46,9 @@ for input_file in "${input_files[@]}"; do
         "vcf")
                 vcf_file="${input_file}"
                 ;;
+        "bed")
+                bed_file="${input_file}"
+                ;;
         "table")
                 first_pass_table="${input_file}"
                 pass_no="Second"
@@ -72,6 +75,7 @@ printf "     input_files: %s\n" "${input_files[@]}"
 printf "    output_files: %s\n" "${output_files}"
 printf "        bam_file: %s\n" "${bam_files[@]}"
 printf "        vcf_file: %s\n" "${vcf_file}"
+printf "        bed_file: %s\n" "${vcf_file}"
 printf "      fasta_file: %s\n" "${fasta_file}"
 printf "        log_file: %s\n" "${log_file}"
 
@@ -81,7 +85,8 @@ cmd="java -Xmx${java_ram} -jar ${gatk} \
         -T BaseRecalibrator \
         --read_buffer_size ${mrir} \
         --num_cpu_threads_per_data_thread ${max_cpus} \
-        -R ${fasta_file} ${bam_files_arg} \
+        -R ${fasta_file} -L ${bed_file} --interval_padding 100 \
+        ${bam_files_arg} \
         -knownSites ${vcf_file} \
         -o ${output_files}"
 

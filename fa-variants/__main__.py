@@ -91,6 +91,18 @@ def main():
                 'Osativa_323_v7.0.gene_exons.gffread.rRNAremoved.gtf'),
         extras=[jgi_logon, jgi_password])
 
+    # convert annotation to .bed
+    annot_bed = main_pipeline.transform(
+        name='annot_bed',
+        task_func=functions.generate_job_function(
+            job_script='src/sh/annot_bed',
+            job_name='annot_bed',
+            job_type='transform',
+            cpus_per_task=8),
+        input=annot,
+        filter=ruffus.suffix('.gtf'),
+        output='.bed')
+
     # mark duplicates with picard
     deduped = main_pipeline.subdivide(
         name='dedupe',
@@ -141,7 +153,7 @@ def main():
     uncalibrated_variants = main_pipeline.merge(
         name='uncalibrated_variants',
         task_func=call_variants,
-        input=[split_and_trimmed, ref_fa],
+        input=[split_and_trimmed, ref_fa, annot_bed],
         output='output/variants_uncalibrated/variants_uncalibrated.vcf')
 
     # filter variants on un-corrected bamfiles
@@ -157,14 +169,15 @@ def main():
     covar_report = main_pipeline.merge(
         name='covar_report',
         task_func=analyze_covar,
-        input=[split_and_trimmed, ref_fa, uncalibrated_variants_filtered],
+        input=[split_and_trimmed, ref_fa, annot_bed,
+               uncalibrated_variants_filtered],
         output="output/covar_analysis/recal_data.table")
 
     # second pass to analyze covariation remaining after recalibration
     second_pass_covar_report = main_pipeline.merge(
         name='second_pass_covar_report',
         task_func=analyze_covar,
-        input=[split_and_trimmed, ref_fa,
+        input=[split_and_trimmed, ref_fa, annot_bed,
                uncalibrated_variants_filtered, covar_report],
         output="output/covar_analysis/post_recal_data.table")
 
@@ -198,7 +211,7 @@ def main():
     variants = main_pipeline.merge(
         name='variants',
         task_func=call_variants,
-        input=[recalibrated, ref_fa],
+        input=[recalibrated, ref_fa, annot_bed],
         output='output/variants/variants.vcf')
 
     # variant filtering
@@ -223,6 +236,8 @@ def main():
         add_inputs=ruffus.add_inputs(ref_fa),
         output=[('output/split_variants/' + x + '.variants_filtered.vcf')
                 for x in species_short_names])
+
+    # regenerate FASTA files per species
 
     ###################
     # RUFFUS COMMANDS #
