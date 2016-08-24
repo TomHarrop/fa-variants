@@ -66,7 +66,6 @@ printf "      fasta_file: %s\n" "${fasta_file}"
 for species_file in "${output_files[@]}"; do
     species_prefix="$(basename "${species_file}" ".variants_filtered.vcf")"
     log_file="${outdir}/${species_prefix}.SelectVariants.log"
-    grep_query="^${species_prefix}.*"
 
     printf "\n  species_prefix: %s\n" "${species_prefix}"
     printf "        log_file: %s\n" "${log_file}"
@@ -77,7 +76,7 @@ for species_file in "${output_files[@]}"; do
         --read_buffer_size ${mrir} --num_threads ${max_cpus}\
         -R ${fasta_file} -V ${vcf_file} \
         -o ${species_file} \
-        -se $(printf "\'%s\'" "${grep_query}") \
+        -sn ${species_prefix}.SM -sn ${species_prefix}.PBM \
         --excludeNonVariants --removeUnusedAlternates"
 
     shopt -s extglob
