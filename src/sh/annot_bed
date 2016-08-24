@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+input_files=""
+output_files=""
+
+# parse options
+OPTIND=1
+while getopts ":i:o:" opt; do
+    case "${opt}" in
+        i)  input_files="${OPTARG}"
+            ;;
+        o)  output_files="${OPTARG}"
+            ;;
+        :)
+            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
+            exit 1
+            ;;
+        \?)
+            printf "Invalid option: -%s\n" "${OPTARG}" >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))"
+
+source "src/sh/bash_header"
+max_mem=$((max_cpus*3))"G"
+
+outdir="$(dirname "${output_files}")"
+log_file="${outdir}/gtf2bed.log"
+
+printf "[ %s: Convert gtf to bed ]\n" "$(date)"
+
+# check variables
+printf "     input_files: %s\n" "${input_files[@]}"
+printf "    output_files: %s\n" "${output_files[@]}"
+printf "        log_file: %s\n" "${log_file[@]}"
+
+export PATH=$PATH:bin/bedops
+
+
+
+# shopt -s extglob
+# printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+# shopt -u extglob
+
+srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+    --output="${output_files}" \
+    bin/bedops/convert2bed -i gtf -m "${max_mem}" \
+    < "${input_files}" &
+
+# log metadata
+metadata_file="${outdir}/gtf2bed.METADATA.csv"
+
+printf "[ %s: Logging metadata ]\n" "$(date)"
+printf "metadata_file: %s\n" "${metadata_file}"
+cat <<- _EOF_ > "${metadata_file}"
+    Script,${0}
+    branch,$(git rev-parse --abbrev-ref HEAD)
+    hash,$(git rev-parse HEAD)
+    date,$(date +%F)
+    bedops version,$(bin/bedops/gtf2bed -w 2>&1 | head -n 2 | tail -n 1)
+    output,${outdir}
+_EOF_
+
+printf "[ %s: Done ]\n" "$(date)"
+
+exit 0
