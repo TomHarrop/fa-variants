@@ -3,7 +3,7 @@
 input_files=()
 bam_files=()
 output_files=""
-gatk="bin/GenomeAnalysisTK-3.6/GenomeAnalysisTK.jar"
+queue_jar="bin/Queue-3.6/Queue.jar"
 
 # parse options
 OPTIND=1
@@ -31,9 +31,6 @@ source "src/sh/bash_header"
 
 printf "[ %s: Call variants ]\n" \
        "$(date)"
-
-java_ram=$((max_cpus*3))"g"
-mrir=$((ram_limit/6000)) # max records in RAM
 
 # parse files from input
 bf_n=0
@@ -74,24 +71,22 @@ printf "    log_file: %s\n" "${log_file}"
 # expand bam_files array to a single string
 bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
 
-cmd="java -Xmx${java_ram} -jar ${gatk} \
-        -T HaplotypeCaller \
-        --read_buffer_size ${mrir} \
-        -R ${fasta_file} -L ${bed_file} --interval_padding 100 \
-        ${bam_files_arg} \
-        -dontUseSoftClippedBases -stand_call_conf 20.0 \
-        -stand_emit_conf 20.0 \
-        -o ${output_files}"
+cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
+      -jobNative "-n 2" -log "${log_file}" 
+      -S "src/scala/ScatterHaplotypeCaller.scala"
+      -R "${fasta_file}" ${bam_files_arg} -L "${bed_file}" 
+      -out "${output_files}" -run )
 
-# --num_cpu_threads_per_data_thread ${max_cpus} \
 
 shopt -s extglob
-printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+#printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+printf "Final command line: "
+printf "%s " "${cmd[@]//+([[:blank:]])/ }"
+printf "\n"
 shopt -u extglob
 
 # run HaplotypeCaller
-srun --ntasks=1 --output="${log_file}" ${cmd} &
-# --cpus-per-task="${max_cpus}" --exclusive 
+"${cmd[@]}" &
 
 printf "[ %s: Waiting for HaplotypeCaller to finish ]\n" "$(date)"
 FAIL=0
@@ -107,7 +102,8 @@ cat <<- _EOF_ > "${metadata_file}"
     branch,$(git rev-parse --abbrev-ref HEAD)
     hash,$(git rev-parse HEAD)
     date,$(date +%F)
-    gatk version,$(java -jar ${gatk} --version 2>&1)
+    gatk-queue version,$(java -jar bin/Queue-3.6/Queue.jar \
+                         --version 2>&1 | head -n 1)
     output,${outdir}
 _EOF_
 

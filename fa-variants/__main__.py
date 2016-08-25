@@ -131,13 +131,8 @@ def main():
         output=["{subdir[0][1]}/split_trim/{LIB[0]}.split.bam"])\
         .follows(fa_idx)
 
-    # we're going to recycle call_variants, filter_variants and analyze_covar
+    # we're going to recycle filter_variants and analyze_covar
     # so we'll get the functions in advance
-    call_variants = functions.generate_job_function(
-        job_script='src/sh/call_variants',
-        job_name='call_variants',
-        job_type='merge',
-        cpus_per_task=8)
     filter_variants = functions.generate_job_function(
         job_script='src/sh/filter_variants',
         job_name='filter_variants',
@@ -152,7 +147,7 @@ def main():
     # call variants without recalibration tables
     uncalibrated_variants = main_pipeline.merge(
         name='uncalibrated_variants',
-        task_func=call_variants,
+        task_func=functions.haplotypecaller_queue_job,
         input=[split_and_trimmed, ref_fa, annot_bed],
         output='output/variants_uncalibrated/variants_uncalibrated.vcf')
 
@@ -210,7 +205,7 @@ def main():
     # final variant calling
     variants = main_pipeline.merge(
         name='variants',
-        task_func=call_variants,
+        task_func=functions.haplotypecaller_queue_job,
         input=[recalibrated, ref_fa, annot_bed],
         output='output/variants/variants.vcf')
 

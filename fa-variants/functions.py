@@ -5,6 +5,7 @@ import subprocess
 import re
 import os
 import datetime
+import tempfile
 
 #############
 # UTILITIES #
@@ -29,17 +30,59 @@ def touch(fname, mode=0o666, dir_fd=None, **kwargs):
                  dir_fd=None if os.supports_fd else dir_fd, **kwargs)
 
 
-# check if logon details were provided
-def check_login_details():
-    if not jgi_logon:
-        raise ValueError('jgi_logon required for download job')
-    if not jgi_password:
-        raise ValueError('jgi_password required for download job')
-
-
 ############################
 # JOB SUBMISSION FUNCTIONS #
 ############################
+
+def haplotypecaller_queue_job(input_files, output_files):
+    # type: (str, str) -> NoneType
+    '''
+    Run the HaplotypeCaller shell script, capture and mail output.
+    '''
+
+    job_script = 'src/sh/call_variants'
+    submit_args = []
+
+    # flatten file lists
+    input_files_flat = list(flatten_list(input_files))
+    
+    # construct argument list
+    y = ['-i'] * len(input_files_flat)
+    new_args = [x for t in
+                zip(y, input_files_flat)
+                for x in t]
+    submit_args.append(new_args)
+    submit_args.append('-o')
+    submit_args.append(output_files)
+
+    submit_args_flat = list(flatten_list(submit_args))
+
+    # run the job and grab output
+    proc = subprocess.Popen(
+        [job_script] + list(submit_args_flat),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = proc.communicate()
+
+    # write output for emailing
+    tmp_out = tempfile.mkstemp(suffix=".txt", text=True)[1]
+    tmp_err = tempfile.mkstemp(suffix=".txt", text=True)[1]
+    with open(tmp_out, 'wb') as f:
+        f.write(out)
+    with open(tmp_err, 'wb') as f:
+        f.write(err)
+
+    # mail output
+    if proc.returncode != 0:
+        subject = "[Tom@SLURM] Pipeline step " + job_script + " FAILED"
+    else:
+        subject = "[Tom@SLURM] Pipeline step " + job_script + " finished"
+    mail = subprocess.Popen(['mail', '-s', subject, '-A', tmp_out, '-A',
+                             tmp_err, 'tom'], stdin=subprocess.PIPE)
+    mail.communicate()
+
+    # check subprocess exit code
+    assert proc.returncode == 0, ("Job " + job_script +
+                                  " failed with non-zero exit code")
 
 
 def submit_job(job_script, ntasks, cpus_per_task, job_name, extras=[]):
