@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+# implement merge with GenotypeGVCFs
+
+exit 1

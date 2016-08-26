@@ -1,0 +1,6 @@
+    Script,src/sh/annot_bed
+    branch,master
+    hash,96b33bd463f78c8a356e03c34a73877b57f73ba0
+    date,2016-08-24
+    bedops version,  version:  2.4.20
+    output,data/genome

@@ -34,57 +34,6 @@ def touch(fname, mode=0o666, dir_fd=None, **kwargs):
 # JOB SUBMISSION FUNCTIONS #
 ############################
 
-def haplotypecaller_queue_job(input_files, output_files):
-    # type: (str, str) -> NoneType
-    '''
-    Run the HaplotypeCaller shell script, capture and mail output.
-    '''
-
-    job_script = 'src/sh/call_variants'
-    submit_args = []
-
-    # flatten file lists
-    input_files_flat = list(flatten_list(input_files))
-    
-    # construct argument list
-    y = ['-i'] * len(input_files_flat)
-    new_args = [x for t in
-                zip(y, input_files_flat)
-                for x in t]
-    submit_args.append(new_args)
-    submit_args.append('-o')
-    submit_args.append(output_files)
-
-    submit_args_flat = list(flatten_list(submit_args))
-
-    # run the job and grab output
-    proc = subprocess.Popen(
-        [job_script] + list(submit_args_flat),
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
-
-    # write output for emailing
-    tmp_out = tempfile.mkstemp(suffix=".txt", text=True)[1]
-    tmp_err = tempfile.mkstemp(suffix=".txt", text=True)[1]
-    with open(tmp_out, 'wb') as f:
-        f.write(out)
-    with open(tmp_err, 'wb') as f:
-        f.write(err)
-
-    # mail output
-    if proc.returncode != 0:
-        subject = "[Tom@SLURM] Pipeline step " + job_script + " FAILED"
-    else:
-        subject = "[Tom@SLURM] Pipeline step " + job_script + " finished"
-    mail = subprocess.Popen(['mail', '-s', subject, '-A', tmp_out, '-A',
-                             tmp_err, 'tom'], stdin=subprocess.PIPE)
-    mail.communicate()
-
-    # check subprocess exit code
-    assert proc.returncode == 0, ("Job " + job_script +
-                                  " failed with non-zero exit code")
-
-
 def submit_job(job_script, ntasks, cpus_per_task, job_name, extras=[]):
     # type: (str, str, str, str, str, list) -> str
     '''
@@ -258,5 +207,77 @@ def generate_job_function(
             job_name=job_name,
             extras=list(submit_args_flat))
         print_job_submission(job_name, job_id)
+
+    return job_function
+
+
+def generate_queue_job_function(job_script, job_name, verbose=False):
+    # type: (str, str) -> NoneType
+    '''
+    Run the HaplotypeCaller shell script, capture and mail output.
+    '''
+
+    def job_function(input_files, output_files):
+
+        if verbose:
+            print("\n\nGenerating Queue job function\n")
+
+        submit_args = []
+
+        # flatten file lists
+        input_files_flat = list(flatten_list([input_files]))
+        output_files_flat = list(flatten_list([output_files]))
+
+        if verbose:
+            print(" input_files_flat: ", input_files_flat)
+            print("output_files_flat: ", output_files_flat)
+
+        # construct argument list
+        y = ['-i'] * len(input_files_flat)
+        new_args = [x for t in
+                    zip(y, input_files_flat)
+                    for x in t]
+        submit_args.append(new_args)
+        y = ['-o'] * len(output_files_flat)
+        new_args = [x for t in
+                    zip(y, output_files_flat)
+                    for x in t]
+        submit_args.append(new_args)
+
+        submit_args_flat = list(flatten_list([submit_args]))
+
+        if verbose:
+            print(" submit_args_flat: ", submit_args_flat)
+
+        # run the job and grab output
+        proc = subprocess.Popen(
+            [job_script] + list(submit_args_flat),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = proc.communicate()
+
+        # write output for emailing
+        tmp_out = tempfile.mkstemp(
+            prefix=(job_name + '.'), suffix=".out.txt", text=True)[1]
+        tmp_err = tempfile.mkstemp(
+            prefix=(job_name + '.'), suffix=".err.txt", text=True)[1]
+        with open(tmp_out, 'wb') as f:
+            f.write(out)
+        with open(tmp_err, 'wb') as f:
+            f.write(err)
+
+        # mail output
+        if proc.returncode != 0:
+            subject = "[Tom@SLURM] Pipeline step " + job_name + " FAILED"
+        else:
+            subject = "[Tom@SLURM] Pipeline step " + job_name + " finished"
+        mail = subprocess.Popen(['mail', '-s', subject, '-A', tmp_out, '-A',
+                                 tmp_err, 'tom'], stdin=subprocess.PIPE)
+        mail.communicate()
+        os.remove(tmp_out)
+        os.remove(tmp_err)
+
+        # check subprocess exit code
+        assert proc.returncode == 0, ("Job " + job_name +
+                                      " failed with non-zero exit code")
 
     return job_function

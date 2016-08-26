@@ -131,8 +131,16 @@ def main():
         output=["{subdir[0][1]}/split_trim/{LIB[0]}.split.bam"])\
         .follows(fa_idx)
 
-    # we're going to recycle filter_variants and analyze_covar
-    # so we'll get the functions in advance
+    # we're going to recycle call_variants, merge_variants, filter_variants
+    # and analyze_covar so we'll get the functions in advance
+    call_variants = functions.generate_queue_job_function(
+        job_script='src/sh/call_variants',
+        job_name='call_variants')
+    merge_variants = functions.generate_job_function(
+        job_script='src/sh/merge_variants',
+        job_name='merge_variants',
+        job_type='transform',
+        cpus_per_task=8)
     filter_variants = functions.generate_job_function(
         job_script='src/sh/filter_variants',
         job_name='filter_variants',
@@ -145,17 +153,26 @@ def main():
         cpus_per_task=8)
 
     # call variants without recalibration tables
-    uncalibrated_variants = main_pipeline.merge(
+    uncalibrated_variants = main_pipeline.transform(
         name='uncalibrated_variants',
-        task_func=functions.haplotypecaller_queue_job,
-        input=[split_and_trimmed, ref_fa, annot_bed],
+        task_func=call_variants,
+        input=split_and_trimmed,
+        add_inputs=ruffus.add_inputs([ref_fa, annot_bed]),
+        filter=ruffus.formatter('output/split_trim/(?P<LIB>.+).split.bam'),
+        output='{subdir[0][1]}/variants_uncalibrated/{LIB[0]}.g.vcf')
+
+    # merge gVCF variants
+    uncalibrated_variants_merged = main_pipeline.merge(
+        name='uncalibrated_variants_merged',
+        task_func=merge_variants,
+        input=[uncalibrated_variants, ref_fa, annot_bed],
         output='output/variants_uncalibrated/variants_uncalibrated.vcf')
 
     # filter variants on un-corrected bamfiles
     uncalibrated_variants_filtered = main_pipeline.transform(
         name='uncalibrated_variants_filtered',
         task_func=filter_variants,
-        input=uncalibrated_variants,
+        input=uncalibrated_variants_merged,
         add_inputs=ruffus.add_inputs(ref_fa),
         filter=ruffus.suffix('_uncalibrated.vcf'),
         output='_uncalibrated_filtered.vcf')
@@ -203,17 +220,26 @@ def main():
         output='{subdir[0][1]}/recal/{LIB[0]}.recal.bam')
 
     # final variant calling
-    variants = main_pipeline.merge(
+    variants = main_pipeline.transform(
         name='variants',
-        task_func=functions.haplotypecaller_queue_job,
-        input=[recalibrated, ref_fa, annot_bed],
+        task_func=call_variants,
+        input=recalibrated,
+        add_inputs=ruffus.add_inputs([recalibrated, ref_fa, annot_bed]),
+        filter=ruffus.formatter('output/recal/(?P<LIB>.+).recal.bam'),
+        output='{subdir[0][1]}/variants/{LIB[0]}.g.vcf')
+
+    # merge gVCF variants
+    variants_merged = main_pipeline.merge(
+        name='variants_merged',
+        task_func=merge_variants,
+        input=[variants, ref_fa, annot_bed],
         output='output/variants/variants.vcf')
 
     # variant filtering
     variants_filtered = main_pipeline.transform(
         name='variants_filtered',
         task_func=filter_variants,
-        input=variants,
+        input=variants_merged,
         add_inputs=ruffus.add_inputs(ref_fa),
         filter=ruffus.suffix('.vcf'),
         output='_filtered.vcf')

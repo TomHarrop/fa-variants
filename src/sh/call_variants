@@ -33,12 +33,10 @@ printf "[ %s: Call variants ]\n" \
        "$(date)"
 
 # parse files from input
-bf_n=0
 for input_file in "${input_files[@]}"; do
     case "${input_file##*.}" in
         "bam")
-                bam_files[${bf_n}]="${input_file}"
-                bf_n=$((bf_n + 1))
+                bam_file="${input_file}"
                 ;;
         "fa")
                 fasta_file="${input_file}"
@@ -58,28 +56,25 @@ outdir="$(dirname "${output_files}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
-log_file="${outdir}/HaplotypeCaller.log"
+bn="$(basename "${bam_file}" ".split.bam")"
+log_file="${outdir}/${bn}.HaplotypeCaller.log"
+job_name="${bn}_HaplotypeCaller"
 
 # check variables
 printf " input_files: %s\n" "${input_files[@]}"
 printf "output_files: %s\n" "${output_files}"
-printf "    bam_file: %s\n" "${bam_files[@]}"
+printf "    bam_file: %s\n" "${bam_file}"
 printf "    bed_file: %s\n" "${bed_file}"
 printf "  fasta_file: %s\n" "${fasta_file}"
 printf "    log_file: %s\n" "${log_file}"
 
-# expand bam_files array to a single string
-bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
-
 cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
-      -jobNative "-n 2" -log "${log_file}" 
+      -jobNative "-n 2 -J ${job_name}" -log "${log_file}" 
       -S "src/scala/ScatterHaplotypeCaller.scala"
-      -R "${fasta_file}" ${bam_files_arg} -L "${bed_file}" 
+      -R "${fasta_file}" -L "${bed_file}" -I "${bam_file}" 
       -out "${output_files}" -run )
 
-
 shopt -s extglob
-#printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
 printf "Final command line: "
 printf "%s " "${cmd[@]//+([[:blank:]])/ }"
 printf "\n"

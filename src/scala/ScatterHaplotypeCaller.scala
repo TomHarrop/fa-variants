@@ -1,5 +1,6 @@
 import org.broadinstitute.gatk.queue.QScript
 import org.broadinstitute.gatk.queue.extensions.gatk._
+import org.broadinstitute.gatk.tools.walkers.haplotypecaller.ReferenceConfidenceMode.GVCF
 
 class ScatterHaplotypeCaller extends QScript {
   @Input(doc="The reference file for the bam files.", shortName="R")
@@ -25,6 +26,7 @@ class ScatterHaplotypeCaller extends QScript {
     // HaplotypeCaller options
     hc.interval_padding = if (intervals == null) 0 else 100
     hc.dontUseSoftClippedBases = true
+    hc.emitRefConfidence = GVCF
     hc.stand_call_conf = 20.0
     hc.stand_emit_conf = 20.0
     // Files
