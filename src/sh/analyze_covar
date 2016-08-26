@@ -2,7 +2,7 @@
 
 input_files=()
 output_files=""
-gatk="bin/GenomeAnalysisTK-3.6/GenomeAnalysisTK.jar"
+queue_jar="bin/Queue-3.6/Queue.jar"
 
 # parse options
 OPTIND=1
@@ -27,9 +27,6 @@ done
 shift "$((OPTIND-1))"
 
 source "src/sh/bash_header"
-
-java_ram=$((max_cpus*3))"g"
-mrir=$((ram_limit/6000)) # max records in RAM
 
 # parse files from input
 pass_no="First"
@@ -69,6 +66,7 @@ if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
 log_file="${outdir}/BaseRecalibrator.${pass_no}.log"
+job_name="BaseRecalibrator_${pass_no}"
 
 # check variables
 printf "     input_files: %s\n" "${input_files[@]}"
@@ -81,27 +79,25 @@ printf "        log_file: %s\n" "${log_file}"
 
 bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
 
-cmd="java -Xmx${java_ram} -jar ${gatk} \
-        -T BaseRecalibrator \
-        --read_buffer_size ${mrir} \
-        --num_cpu_threads_per_data_thread ${max_cpus} \
-        -R ${fasta_file} -L ${bed_file} --interval_padding 100 \
-        ${bam_files_arg} \
-        -knownSites ${vcf_file} \
-        -o ${output_files}"
+cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
+      jobNative "-n 2 -J ${job_name}" -log "${log_file}"
+      -S "src/scala/ScatterBaseRecalibrator.scala" 
+      -R "${fasta_file}" -L "${bed_file}" ${bam_files_arg}
+      -out "${output_files}" -run )
 
 if [[ "${pass_no}" == "Second" ]]; then
     printf "first_pass_table: %s\n" "${first_pass_table}"
-    cmd="${cmd} -BQSR ${first_pass_table}"
+    cmd=( ${cmd[@]} "-BQSR" "${first_pass_table}" )
 fi
 
 shopt -s extglob
-printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+printf "Final command line: "
+printf "%s " "${cmd[@]//+([[:blank:]])/ }"
+printf "\n"
 shopt -u extglob
 
 # run BaseRecalibrator
-srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
-    --output="${log_file}" ${cmd} &
+"${cmd[@]}" &
 
 printf "[ %s: Waiting for BaseRecalibrator to finish ]\n" "$(date)"
 FAIL=0
@@ -117,7 +113,7 @@ cat <<- _EOF_ > "${metadata_file}"
     branch,$(git rev-parse --abbrev-ref HEAD)
     hash,$(git rev-parse HEAD)
     date,$(date +%F)
-    gatk version,$(java -jar ${gatk} --version 2>&1)
+    gatk-queue version,$(java -jar "${queue_jar}" --version 2>&1 | head -n 1)
     output,${outdir}
 _EOF_
 

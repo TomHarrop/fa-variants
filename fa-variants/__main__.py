@@ -146,11 +146,9 @@ def main():
         job_name='filter_variants',
         job_type='transform',
         cpus_per_task=1)
-    analyze_covar = functions.generate_job_function(
+    analyze_covar = functions.generate_queue_job_function(
         job_script='src/sh/analyze_covar',
-        job_name='analyze_covar',
-        job_type='merge',
-        cpus_per_task=8)
+        job_name='analyze_covar')
 
     # call variants without recalibration tables
     uncalibrated_variants = main_pipeline.transform(
