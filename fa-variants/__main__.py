@@ -165,7 +165,7 @@ def main():
     uncalibrated_variants_merged = main_pipeline.merge(
         name='uncalibrated_variants_merged',
         task_func=merge_variants,
-        input=[uncalibrated_variants, ref_fa, annot_bed],
+        input=[uncalibrated_variants, ref_fa],
         output='output/variants_uncalibrated/variants_uncalibrated.vcf')
 
     # filter variants on un-corrected bamfiles
@@ -232,7 +232,7 @@ def main():
     variants_merged = main_pipeline.merge(
         name='variants_merged',
         task_func=merge_variants,
-        input=[variants, ref_fa, annot_bed],
+        input=[variants, ref_fa],
         output='output/variants/variants.vcf')
 
     # variant filtering

@@ -80,10 +80,10 @@ def print_job_submission(job_name, job_id):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     print('[', now, '] : Job ' + job_name + ' run with JobID ' + job_id)
 
+
 ######################
 # FUNCTION GENERATOR #
 ######################
-
 
 def generate_job_function(
         job_script, job_name, job_type='transform', ntasks=1,
