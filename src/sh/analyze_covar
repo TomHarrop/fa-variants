@@ -89,7 +89,7 @@ cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
 
 if [[ "${pass_no}" == "Second" ]]; then
     printf "first_pass_table: %s\n" "${first_pass_table}"
-    cmd=( ${cmd[@]} "-BQSR" "${first_pass_table}" )
+    cmd+=( "-BQSR" "${first_pass_table}" )
 fi
 
 shopt -s extglob
