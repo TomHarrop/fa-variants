@@ -72,6 +72,7 @@ cmd=( java "-Xmx${java_ram}" -jar "${gatk}"
       -T GenotypeGVCFs
       --read_buffer_size "${mrir}" --num_threads "${max_cpus}"
       -stand_call_conf 20.0 -stand_emit_conf 20.0
+      --max_alternate_alleles 15
       -R "${fasta_file}" ${vcfg_files_string} -o "${output_files}" )
 
 shopt -s extglob

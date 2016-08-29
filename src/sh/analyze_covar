@@ -80,7 +80,7 @@ printf "        log_file: %s\n" "${log_file}"
 bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
 
 cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
-      jobNative "-n 2 -J ${job_name}" -log "${log_file}"
+      -jobNative "-n 2 -J ${job_name}" -log "${log_file}"
       -S "src/scala/ScatterBaseRecalibrator.scala" 
       -R "${fasta_file}" -L "${bed_file}" ${bam_files_arg}
       -out "${output_files}" -run )
