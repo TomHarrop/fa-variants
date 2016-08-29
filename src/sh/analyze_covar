@@ -82,7 +82,9 @@ bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
 cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
       -jobNative "-n 2 -J ${job_name}" -log "${log_file}"
       -S "src/scala/ScatterBaseRecalibrator.scala" 
-      -R "${fasta_file}" -L "${bed_file}" ${bam_files_arg}
+      -R "${fasta_file}" ${bam_files_arg}
+      -L "${bed_file}"
+      -knownSites "${vcf_file}"
       -out "${output_files}" -run )
 
 if [[ "${pass_no}" == "Second" ]]; then

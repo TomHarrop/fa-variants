@@ -1,0 +1,6 @@
+    Script,src/sh/merge_variants
+    branch,master
+    hash,17b8a91bf031652f5f1667bad7c61b500c673462
+    date,2016-08-29
+    gatk version,3.6-0-g89b7209
+    output,output/variants_uncalibrated
