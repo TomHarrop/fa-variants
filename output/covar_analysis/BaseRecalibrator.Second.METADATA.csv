@@ -1,6 +1,0 @@
-    Script,src/sh/analyze_covar
-    branch,master
-    hash,9737713393797debd6f580a47c9ef289eec5bf3d
-    date,2016-08-29
-    gatk-queue version,3.6-0-g89b7209
-    output,output/covar_analysis

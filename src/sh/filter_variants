@@ -64,26 +64,28 @@ printf "    vcf_file: %s\n" "${vcf_file}"
 printf "  fasta_file: %s\n" "${fasta_file}"
 printf "    log_file: %s\n" "${log_file}"
 
-# n.b. mistake on GATK website!!! can't have spaces in the filter expressions.
-fs='FS>30.0'
-qd='QD<2.0'
+# GATK-recommended hard filter settings
+fs='FS > 30.0'
+qd='QD < 2.0'
 
-cmd="java -Xmx${java_ram} -jar ${gatk} \
-        -T VariantFiltration \
-        --read_buffer_size ${mrir} \
-        -R ${fasta_file} -V ${vcf_file} \
-        -window 35 -cluster 3 \
-        -filterName FS -filter \"${fs}\" \
-        -filterName QD -filter \"${qd}\" \
-        -o ${output_files}"
+cmd=( java "-Xmx${java_ram}" -jar "${gatk}" 
+      -T VariantFiltration 
+      --read_buffer_size "${mrir}" 
+      -R "${fasta_file}" -V "${vcf_file}" 
+      -window 35 -cluster 3 
+      -filterName FS -filter "${fs}"
+      -filterName QD -filter "${qd}" 
+      -o "${output_files}" )
 
 shopt -s extglob
-printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+printf "Final command line: "
+printf "%s " "${cmd[@]//+([[:blank:]])/ }"
+printf "\n"
 shopt -u extglob
 
 # run VariantFiltration
 srun --ntasks=1 --cpus-per-task="${max_cpus}" \
-    --output="${log_file}" ${cmd} &
+    --output="${log_file}" "${cmd[@]}" &
 
 printf "[ %s: Waiting for VariantFiltration to finish ]\n" "$(date)"
 FAIL=0
