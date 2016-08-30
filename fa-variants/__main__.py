@@ -222,7 +222,7 @@ def main():
         name='variants',
         task_func=call_variants,
         input=recalibrated,
-        add_inputs=ruffus.add_inputs([recalibrated, ref_fa, annot_bed]),
+        add_inputs=ruffus.add_inputs(ref_fa, annot_bed),
         filter=ruffus.formatter('output/recal/(?P<LIB>.+).recal.bam'),
         output='{subdir[0][1]}/variants/{LIB[0]}.g.vcf')
 

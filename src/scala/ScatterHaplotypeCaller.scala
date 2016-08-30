@@ -22,7 +22,7 @@ class ScatterHaplotypeCaller extends QScript {
     hc.nct = 2
     hc.memoryLimit = 6
     hc.javaGCThreads = 1
-    hc.scatterCount = 4
+    hc.scatterCount = 12
     // HaplotypeCaller options
     hc.interval_padding = if (intervals == null) 0 else 100
     hc.dontUseSoftClippedBases = true
