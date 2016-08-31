@@ -133,6 +133,9 @@ def main():
 
     # we're going to recycle call_variants, merge_variants, filter_variants
     # and analyze_covar so we'll get the functions in advance
+    test_job_function = functions.generate_job_function(
+        job_script='src/sh/io_parser',
+        job_name='test')
     call_variants = functions.generate_queue_job_function(
         job_script='src/sh/call_variants',
         job_name='call_variants')
@@ -157,7 +160,7 @@ def main():
         input=split_and_trimmed,
         add_inputs=ruffus.add_inputs([ref_fa, annot_bed]),
         filter=ruffus.formatter('output/split_trim/(?P<LIB>.+).split.bam'),
-        output='{subdir[0][1]}/variants_uncalibrated/{LIB[0]}.g.vcf')
+        output='{subdir[0][1]}/variants_uncalibrated/{LIB[0]}.g.vcf.gz')
 
     # merge gVCF variants
     uncalibrated_variants_merged = main_pipeline.merge(
