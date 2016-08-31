@@ -300,16 +300,17 @@ def generate_queue_job_function(job_script, job_name, verbose=False):
             print("output_files_flat: ", output_files_flat)
 
         # construct argument list
-        y = ['-i'] * len(input_files_flat)
-        new_args = [x for t in
-                    zip(y, input_files_flat)
-                    for x in t]
-        submit_args.append(new_args)
-        y = ['-o'] * len(output_files_flat)
-        new_args = [x for t in
-                    zip(y, output_files_flat)
-                    for x in t]
-        submit_args.append(new_args)
+        input_args = [io_file_to_bash_flag(x, 'input')
+                      for x in input_files_flat]
+        input_args_flat = list(flatten_list(input_args))
+
+        submit_args.append(input_args_flat)
+
+        output_args = [io_file_to_bash_flag(x, 'output')
+                       for x in output_files_flat]
+        output_args_flat = list(flatten_list(output_args))
+
+        submit_args.append(output_args_flat)
 
         submit_args_flat = list(flatten_list([submit_args]))
 
