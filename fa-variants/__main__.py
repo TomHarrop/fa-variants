@@ -178,12 +178,24 @@ def main():
         filter=ruffus.suffix('_uncalibrated.vcf.gz'),
         output='_uncalibrated_filtered.vcf.gz')
 
+    # select variant (only recalibrate using passed SNPs)
+    uncalibrated_variants_selected = main_pipeline.transform(
+        name='uncalibrated_variants_selected',
+        task_func=functions.generate_job_function(
+            job_script='src/sh/select_variants',
+            job_name='select_variants',
+            job_type='transform'),
+        input=uncalibrated_variants_filtered,
+        add_inputs=ruffus.add_inputs(ref_fa),
+        filter=ruffus.suffix('_uncalibrated_filtered.vcf.gz'),
+        output='_uncalibrated_selected.vcf.gz')
+
     # create recalibration report with filtered variants
     covar_report = main_pipeline.merge(
         name='covar_report',
         task_func=analyze_covar,
         input=[split_and_trimmed, ref_fa, annot_bed,
-               uncalibrated_variants_filtered],
+               uncalibrated_variants_selected],
         output="output/covar_analysis/recal_data.table")
 
     # second pass to analyze covariation remaining after recalibration
