@@ -167,7 +167,7 @@ def main():
         name='uncalibrated_variants_merged',
         task_func=merge_variants,
         input=[uncalibrated_variants, ref_fa],
-        output='output/variants_uncalibrated/variants_uncalibrated.vcf')
+        output='output/variants_uncalibrated/variants_uncalibrated.vcf.gz')
 
     # filter variants on un-corrected bamfiles
     uncalibrated_variants_filtered = main_pipeline.transform(

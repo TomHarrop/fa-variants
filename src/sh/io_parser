@@ -55,83 +55,83 @@ OPTIND=1
 while getopts ":b:c:d:e:f:g:h:i:j:k:l:m:p:r:t:u:v:w:" opt; do
     case "${opt}" in
         "b")
-            input_bam+="${OPTARG}"
+            input_bam+=( "${OPTARG}" )
             printf "   input_bam: %s\n" "${OPTARG}"
             ;;
         "c")
-            output_bam+="${OPTARG}"
+            output_bam+=( "${OPTARG}" )
             printf "  output_bam: %s\n" "${OPTARG}"
             ;;
         "d")
-            output_bai+="${OPTARG}"
+            output_bai+=( "${OPTARG}" )
             printf "  output_bai: %s\n" "${OPTARG}"
             ;;
         "e")
-            jgi_logon+="${OPTARG}"
+            jgi_logon+=( "${OPTARG}" )
             printf "   jgi_logon: %s\n" "${OPTARG}"
             ;;
         "f")
-            input_fa+="${OPTARG}"
+            input_fa+=( "${OPTARG}" )
             printf "    input_fa: %s\n" "${OPTARG}"
             ;;
         "g")
-            output_fa+="${OPTARG}"
+            output_fa+=( "${OPTARG}" )
             printf "   output_fa: %s\n" "${OPTARG}"
             ;;
         "h")
-            output_dict+="${OPTARG}"
+            output_dict+=( "${OPTARG}" )
             printf " output_dict: %s\n" "${OPTARG}"
             ;;
         "i")
-            output_fai+="${OPTARG}"
+            output_fai+=( "${OPTARG}" )
             printf "  output_fai: %s\n" "${OPTARG}"
             ;;
         "j")
-            input_gtf+="${OPTARG}"
+            input_gtf+=( "${OPTARG}" )
             printf "   input_gtf: %s\n" "${OPTARG}"
             ;;
         "k")
-            output_gtf+="${OPTARG}"
+            output_gtf+=( "${OPTARG}" )
             printf "  output_gtf: %s\n" "${OPTARG}"
             ;;
         "l")
-            input_bed+="${OPTARG}"
+            input_bed+=( "${OPTARG}" )
             printf "   input_bed: %s\n" "${OPTARG}"
             ;;
         "m")
-            output_bed+="${OPTARG}"
+            output_bed+=( "${OPTARG}" )
             printf "  output_bed: %s\n" "${OPTARG}"
             ;;
         "p")
-            jgi_password+="${OPTARG}"
+            jgi_password+=( "${OPTARG}" )
             printf "jgi_password: %s\n" "${OPTARG}"
             ;;
         "r")
-            output_pdf+="${OPTARG}"
+            output_pdf+=( "${OPTARG}" )
             printf "  output_pdf: %s\n" "${OPTARG}"
             ;;
         "t")
-            input_table+="${OPTARG}"
+            input_table+=( "${OPTARG}" )
             printf " input_table: %s\n" "${OPTARG}"
             ;;
         "u")
-            output_table+="${OPTARG}"
+            output_table+=( "${OPTARG}" )
             printf "output_table: %s\n" "${OPTARG}"
             ;;
         "v")
-            input_vcf+="${OPTARG}"
+            input_vcf+=( "${OPTARG}" )
             printf "   input_vcf: %s\n" "${OPTARG}"
             ;;
         "w")
-            output_vcf+="${OPTARG}"
+            output_vcf+=( "${OPTARG}" )
             printf "  output_vcf: %s\n" "${OPTARG}"
             ;;
         "y")
-            other_input+="${OPTARG}"
+            other_input+=( "${OPTARG}" )
             printf " other_input: %s\n" "${OPTARG}"
             ;;
         "z")
-            other_output+="${OPTARG}"
+            other_output+=( "${OPTARG}" )
             printf "other_output: %s\n" "${OPTARG}"
             ;;
         :)
