@@ -1,6 +1,6 @@
     Script,src/sh/call_variants
-    branch,master
-    hash,1b76fd26cbdcfa35d3319beec860b48408a37680
-    date,2016-08-26
+    branch,std-fnames
+    hash,95472b7f4e9dd3c1eed6fe431db7e77f8095b62e
+    date,2016-08-31
     gatk-queue version,3.6-0-g89b7209
     output,output/variants_uncalibrated

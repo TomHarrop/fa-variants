@@ -1,78 +1,27 @@
 #!/usr/bin/env bash
 
-input_files=()
-bam_files=()
-output_files=""
 queue_jar="bin/Queue-3.6/Queue.jar"
 
-# parse options
-OPTIND=1
-if_n=0
-while getopts ":i:o:" opt; do
-    case "${opt}" in
-        i)  input_files[${if_n}]="${OPTARG}"
-            if_n=$((if_n + 1))
-            ;;
-        o)  output_files="${OPTARG}"
-            ;;
-        :)
-            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-        \?)
-            printf "Invalid option: -%s\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-    esac
-done
-shift "$((OPTIND-1))"
+printf "[ %s: Call variants ]\n" "$(date)"
 
 source "src/sh/bash_header"
-
-printf "[ %s: Call variants ]\n" \
-       "$(date)"
-
-# parse files from input
-for input_file in "${input_files[@]}"; do
-    case "${input_file##*.}" in
-        "bam")
-                bam_file="${input_file}"
-                ;;
-        "fa")
-                fasta_file="${input_file}"
-                ;;
-        "bed")
-                bed_file="${input_file}"
-                ;;
-        *)
-                printf "Unrecognised input file: %s\n" "${input_file}" >&2
-                exit 1
-                ;;
-    esac
-done
+source "src/sh/io_parser"
 
 # make outdir
-outdir="$(dirname "${output_files}")"
+outdir="$(dirname "${output_vcf}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
-bn="$(basename "${bam_file}" ".split.bam")"
+bn="$(basename "${input_bam}" ".split.bam")"
 log_file="${outdir}/${bn}.HaplotypeCaller.log"
 job_name="${bn}_HaplotypeCaller"
 
-# check variables
-printf " input_files: %s\n" "${input_files[@]}"
-printf "output_files: %s\n" "${output_files}"
-printf "    bam_file: %s\n" "${bam_file}"
-printf "    bed_file: %s\n" "${bed_file}"
-printf "  fasta_file: %s\n" "${fasta_file}"
-printf "    log_file: %s\n" "${log_file}"
-
+# build command
 cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
       -jobNative "-n 2 -J ${job_name}" -log "${log_file}" 
       -S "src/scala/ScatterHaplotypeCaller.scala"
-      -R "${fasta_file}" -L "${bed_file}" -I "${bam_file}" 
-      -out "${output_files}" -run )
+      -R "${input_fa}" -L "${input_bed}" -I "${input_bam}" 
+      -out "${output_vcf}" -run )
 
 shopt -s extglob
 printf "Final command line: "

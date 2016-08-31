@@ -1,79 +1,31 @@
 #!/usr/bin/env bash
 
 gatk="bin/GenomeAnalysisTK-3.6/GenomeAnalysisTK.jar"
-input_files=()
-vcfg_files=()
-output_files=""
 
-# parse options
-OPTIND=1
-if_n=0
-while getopts ":i:o:" opt; do
-    case "${opt}" in
-        i)  input_files[${if_n}]="${OPTARG}"
-            if_n=$((if_n + 1))
-            ;;
-        o)  output_files="${OPTARG}"
-            ;;
-        :)
-            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-        \?)
-            printf "Invalid option: -%s\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-    esac
-done
-shift "$((OPTIND-1))"
+printf "[ %s: Join variants and call genotypes ]\n" "$(date)"
 
 source "src/sh/bash_header"
+source "src/sh/io_parser"
+
 java_ram=$((max_cpus*3))"g"
 mrir=$((ram_limit/6000)) # max records in RAM
 
-printf "[ %s: Join variants and call genotypes ]\n" \
-       "$(date)"
-
-# parse files from input
-vcfg_no=0
-for input_file in "${input_files[@]}"; do
-    case "${input_file##*.}" in
-        "vcf")
-                vcfg_files[${vcfg_no}]="${input_file}"
-                vcfg_no=$(( vcfg_no + 1 ))
-                ;;
-        "fa")
-                fasta_file="${input_file}"
-                ;;
-        *)
-                printf "Unrecognised input file: %s\n" "${input_file}" >&2
-                exit 1
-                ;;
-    esac
-done
-
 # make outdir
-outdir="$(dirname "${output_files}")"
+outdir="$(dirname "${output_vcf}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
 log_file="${outdir}/GenotypeGVCFs.log"
 
-# check variables
-printf " input_files: %s\n" "${input_files[@]}"
-printf "output_files: %s\n" "${output_files}"
-printf "  vcfg_files: %s\n" "${vcfg_files[@]}"
-printf "  fasta_file: %s\n" "${fasta_file}"
-printf "    log_file: %s\n" "${log_file}"
-
-vcfg_files_string="$(printf ' --variant %s' "${vcfg_files[@]}")"
+# build command
+vcfg_files_string="$(printf ' --variant %s' "${input_vcf[@]}")"
 
 cmd=( java "-Xmx${java_ram}" -jar "${gatk}" 
       -T GenotypeGVCFs
       --read_buffer_size "${mrir}" --num_threads "${max_cpus}"
       -stand_call_conf 20.0 -stand_emit_conf 20.0
       --max_alternate_alleles 15
-      -R "${fasta_file}" ${vcfg_files_string} -o "${output_files}" )
+      -R "${input_fa}" ${vcfg_files_string} -o "${output_vcf}" )
 
 shopt -s extglob
 printf "Final command line: "

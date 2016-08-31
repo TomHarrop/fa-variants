@@ -23,7 +23,7 @@ command.args <- commandArgs(trailingOnly = TRUE)
 #                   "-o", "test/out.pdf")
 parsed.args <- argparsR::ParseArguments(
   accepted.switches = list(
-    `output.files` = "-o", `input.files` = "-i"),
+    `output.files` = "-r", `input.files` = "-t"),
   command.args)
 
 

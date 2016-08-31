@@ -133,6 +133,9 @@ def main():
 
     # we're going to recycle call_variants, merge_variants, filter_variants
     # and analyze_covar so we'll get the functions in advance
+    test_job_function = functions.generate_job_function(
+        job_script='src/sh/io_parser',
+        job_name='test')
     call_variants = functions.generate_queue_job_function(
         job_script='src/sh/call_variants',
         job_name='call_variants')
@@ -157,14 +160,14 @@ def main():
         input=split_and_trimmed,
         add_inputs=ruffus.add_inputs([ref_fa, annot_bed]),
         filter=ruffus.formatter('output/split_trim/(?P<LIB>.+).split.bam'),
-        output='{subdir[0][1]}/variants_uncalibrated/{LIB[0]}.g.vcf')
+        output='{subdir[0][1]}/variants_uncalibrated/{LIB[0]}.g.vcf.gz')
 
     # merge gVCF variants
     uncalibrated_variants_merged = main_pipeline.merge(
         name='uncalibrated_variants_merged',
         task_func=merge_variants,
         input=[uncalibrated_variants, ref_fa],
-        output='output/variants_uncalibrated/variants_uncalibrated.vcf')
+        output='output/variants_uncalibrated/variants_uncalibrated.vcf.gz')
 
     # filter variants on un-corrected bamfiles
     uncalibrated_variants_filtered = main_pipeline.transform(
@@ -172,8 +175,8 @@ def main():
         task_func=filter_variants,
         input=uncalibrated_variants_merged,
         add_inputs=ruffus.add_inputs(ref_fa),
-        filter=ruffus.suffix('_uncalibrated.vcf'),
-        output='_uncalibrated_filtered.vcf')
+        filter=ruffus.suffix('_uncalibrated.vcf.gz'),
+        output='_uncalibrated_filtered.vcf.gz')
 
     # create recalibration report with filtered variants
     covar_report = main_pipeline.merge(
@@ -224,14 +227,14 @@ def main():
         input=recalibrated,
         add_inputs=ruffus.add_inputs(ref_fa, annot_bed),
         filter=ruffus.formatter('output/recal/(?P<LIB>.+).recal.bam'),
-        output='{subdir[0][1]}/variants/{LIB[0]}.g.vcf')
+        output='{subdir[0][1]}/variants/{LIB[0]}.g.vcf.gz')
 
     # merge gVCF variants
     variants_merged = main_pipeline.merge(
         name='variants_merged',
         task_func=merge_variants,
         input=[variants, ref_fa],
-        output='output/variants/variants.vcf')
+        output='output/variants/variants.vcf.gz')
 
     # variant filtering
     variants_filtered = main_pipeline.transform(
@@ -239,8 +242,8 @@ def main():
         task_func=filter_variants,
         input=variants_merged,
         add_inputs=ruffus.add_inputs(ref_fa),
-        filter=ruffus.suffix('.vcf'),
-        output='_filtered.vcf')
+        filter=ruffus.suffix('.vcf.gz'),
+        output='_filtered.vcf.gz')
 
     # variants by species
     split_variants = main_pipeline.subdivide(
@@ -253,7 +256,7 @@ def main():
         input=variants_filtered,
         filter=ruffus.formatter(),
         add_inputs=ruffus.add_inputs(ref_fa),
-        output=[('output/split_variants/' + x + '.variants_filtered.vcf')
+        output=[('output/split_variants/' + x + '.variants_filtered.vcf.gz')
                 for x in species_short_names])
 
     # regenerate FASTA files per species
