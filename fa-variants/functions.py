@@ -30,6 +30,79 @@ def touch(fname, mode=0o666, dir_fd=None, **kwargs):
                  dir_fd=None if os.supports_fd else dir_fd, **kwargs)
 
 
+# convert input and output files to a bash-friendly option
+def io_file_to_bash_flag(file_name, file_type, debug=False):
+    # dictionary of options:
+    # -b: input_bam
+    # -c: output_bam
+    # -d: output_bai
+    # -e: jgi_logon
+    # -f: input_fa
+    # -g: output_fa
+    # -h: output_dict
+    # -i: output_fai
+    # -j: input_gtf
+    # -k: output_gtf
+    # -l: input_bed
+    # -m: output_bed
+    # -p: jgi_password
+    # -r: output_pdf
+    # -t: input_table
+    # -u: output_table
+    # -v: input_vcf
+    # -w: output_vcf
+    # -y: other_input
+    # -z: other_output
+
+    # hard code input/output type
+    input_flags = {
+        '.bam': 'b',
+        '.fa': 'f',
+        '.fasta': 'f',
+        '.gtf': 'j',
+        '.bed': 'l',
+        '.table': 't',
+        '.vcf': 'v'}
+    output_flags = {
+        '.bam': 'c',
+        '.bai': 'd',
+        '.fa': 'g',
+        '.fasta': 'g',
+        '.dict': 'h',
+        '.fai': 'i',
+        '.gtf': 'k',
+        '.bed': 'm',
+        '.pdf': 'r',
+        '.table': 'u',
+        '.vcf': 'w'}
+
+    # get the first extension and deal with .gz files
+    file_ext = os.path.splitext(file_name)[1]
+    if file_ext == '.gz':
+        file_ext = os.path.splitext(os.path.splitext(file_name)[0])[1]
+
+    if debug:
+        print('file_type: ', file_type)
+        print('file_name: ', file_name)
+        print(' file_ext: ', file_ext)
+
+    # find extension and switch in input or output files
+    if file_type == 'input':
+        if file_ext not in input_flags:
+            raise KeyError(('input file extension ' +
+                            file_ext +
+                            ' not recognised'))
+        else:
+            return([('-' + input_flags[file_ext]), file_name])
+    if file_type == 'output':
+        if file_ext not in output_flags:
+            raise KeyError(('output file extension ' +
+                            file_ext +
+                            ' not recognised'))
+        else:
+            return([('-' + output_flags[file_ext]), file_name])
+
+
 ############################
 # JOB SUBMISSION FUNCTIONS #
 ############################
@@ -100,14 +173,14 @@ def generate_job_function(
     # Ruffus.
 
     # check job_type
-    _allowed_job_types = ['transform', 'merge', 'originate', 'download']
+    _allowed_job_types = ['transform', 'originate', 'download']
     if job_type not in _allowed_job_types:
         raise ValueError('{job_type} not an allowed job_type')
 
     # set up the args
     function_args = []
     # if we expect input_files, they go first
-    if job_type in ['transform', 'merge']:
+    if job_type == 'transform':
         function_args.append('input_files')
     # all job_types have output_files
     function_args.append('output_files')
@@ -122,14 +195,8 @@ def generate_job_function(
     # define the function
     def job_function(*function_args):
 
-        # standardise submit_args and handle them in bash.
-        # provide arguments to submit_job extras argument in the following
-        # order:
-        # -i: input_files
-        # -o: output_files
-        # -e: jgi_logon (email)
-        # -p: jgi_password
-        # extra arguments passed verbatim from Ruffus
+        # use io_file_to_bash_flag function to generate arguments to pass to
+        # bash script.
 
         function_args_list = list(function_args)
         submit_args = []
@@ -139,33 +206,33 @@ def generate_job_function(
             print("\nfunction_args_list: ", function_args_list)
 
         # if we expect input_files, they go first
-        if job_type in ['transform', 'merge']:
+        if job_type == 'transform':
             input_files = [function_args_list.pop(0)]
             input_files_flat = list(flatten_list(input_files))
-            y = ['-i'] * len(input_files_flat)
-            new_args = [x for t in
-                        zip(y, input_files_flat)
-                        for x in t]
-            submit_args.append(new_args)
+            input_args = [io_file_to_bash_flag(x, 'input')
+                          for x in input_files_flat]
+            input_args_flat = list(flatten_list(input_args))
+
+            submit_args.append(input_args_flat)
 
             if verbose:
-                print("\ninput_files_flat:", input_files_flat)
-                print("\nnew_args: ", new_args)
-                print("\nsubmit_args: ", submit_args)
+                print("\n input_files_flat:", input_files_flat)
+                print("\n  input_args_flat: ", input_args_flat)
+                print("\n      submit_args: ", submit_args)
 
         # output_files required for all job_types
         output_files = [function_args_list.pop(0)]
         output_files_flat = list(flatten_list(output_files))
-        y = ['-o'] * len(output_files_flat)
-        new_args = [x for t in
-                    zip(y, output_files_flat)
-                    for x in t]
-        submit_args.append(new_args)
+        output_args = [io_file_to_bash_flag(x, 'output')
+                       for x in output_files_flat]
+        output_args_flat = list(flatten_list(output_args))
+
+        submit_args.append(output_args_flat)
 
         if verbose:
             print("\noutput_files_flat:", output_files_flat)
-            print("\nnew_args: ", new_args)
-            print("\nsubmit_args: ", submit_args)
+            print("\n output_args_flat: ", output_args_flat)
+            print("\n      submit_args: ", submit_args)
 
         # if we have logon details they go here
         if job_type == 'download':
