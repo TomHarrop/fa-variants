@@ -227,14 +227,14 @@ def main():
         input=recalibrated,
         add_inputs=ruffus.add_inputs(ref_fa, annot_bed),
         filter=ruffus.formatter('output/recal/(?P<LIB>.+).recal.bam'),
-        output='{subdir[0][1]}/variants/{LIB[0]}.g.vcf')
+        output='{subdir[0][1]}/variants/{LIB[0]}.g.vcf.gz')
 
     # merge gVCF variants
     variants_merged = main_pipeline.merge(
         name='variants_merged',
         task_func=merge_variants,
         input=[variants, ref_fa],
-        output='output/variants/variants.vcf')
+        output='output/variants/variants.vcf.gz')
 
     # variant filtering
     variants_filtered = main_pipeline.transform(
@@ -242,8 +242,8 @@ def main():
         task_func=filter_variants,
         input=variants_merged,
         add_inputs=ruffus.add_inputs(ref_fa),
-        filter=ruffus.suffix('.vcf'),
-        output='_filtered.vcf')
+        filter=ruffus.suffix('.vcf.gz'),
+        output='_filtered.vcf.gz')
 
     # variants by species
     split_variants = main_pipeline.subdivide(
@@ -256,7 +256,7 @@ def main():
         input=variants_filtered,
         filter=ruffus.formatter(),
         add_inputs=ruffus.add_inputs(ref_fa),
-        output=[('output/split_variants/' + x + '.variants_filtered.vcf')
+        output=[('output/split_variants/' + x + '.variants_filtered.vcf.gz')
                 for x in species_short_names])
 
     # regenerate FASTA files per species
