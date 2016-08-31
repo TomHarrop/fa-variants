@@ -78,16 +78,31 @@ dinuc.table <- covariate.table[CovariateName == "Context" &
                                  CovariateValue %in% di.nt]
 
 # set up scale
-obs.formatter <- function(x) {
+x <- c(NA, 1e+07, 2e+07, 3e+07, 4e+07, 5e+07, NA)
+obs.formatter <- function(x, debug = TRUE) {
+  
   # decimal and exponential component
   dc <- as.numeric(gsub("^(.+)e.*", "\\1", x))
   ec <- as.numeric(gsub(".*e\\+0?", "", x))
 
+  # work out label decimals
+  dc.c <- as.character(dc)
+  dc.c <- dc.c[grep("^[[:digit:]]+\\.[[:digit:]]+", dc.c)]
+  dec <- sapply(dc.c, gsub, pattern = "^.*\\.", replacement = "")
+  if (length(dec) > 0) {
+    dec.no <- max(sapply(dec, length))
+  } else {
+    dec.no <- 0
+  }
+  
   # NAs and zeros
   na.lab <- unique(c(which(is.na(dc)), which (is.na(ec))))
   zero.lab <- which(dc == 0)
 
-  raw.lab <- paste0(dc, "%*%10^", ec)
+  # format dc as a string
+  dc.str <- format(round(dc, dec.no), nsmall = dec.no, trim = TRUE)
+  
+  raw.lab <- paste0("\"", dc.str, "\"", "%*%10^", ec)
   raw.lab[na.lab] <- NA
   raw.lab[zero.lab] <- 0
 
