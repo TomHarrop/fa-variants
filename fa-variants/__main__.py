@@ -175,8 +175,8 @@ def main():
         task_func=filter_variants,
         input=uncalibrated_variants_merged,
         add_inputs=ruffus.add_inputs(ref_fa),
-        filter=ruffus.suffix('_uncalibrated.vcf'),
-        output='_uncalibrated_filtered.vcf')
+        filter=ruffus.suffix('_uncalibrated.vcf.gz'),
+        output='_uncalibrated_filtered.vcf.gz')
 
     # create recalibration report with filtered variants
     covar_report = main_pipeline.merge(

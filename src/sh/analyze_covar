@@ -1,95 +1,41 @@
 #!/usr/bin/env bash
 
-input_files=()
-output_files=""
 queue_jar="bin/Queue-3.6/Queue.jar"
 
-# parse options
-OPTIND=1
-if_n=0
-while getopts ":i:o:" opt; do
-    case "${opt}" in
-        i)  input_files[${if_n}]="${OPTARG}"
-            if_n=$((if_n + 1))
-            ;;
-        o)  output_files="${OPTARG}"
-            ;;
-        :)
-            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-        \?)
-            printf "Invalid option: -%s\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-    esac
-done
-shift "$((OPTIND-1))"
-
 source "src/sh/bash_header"
+source "src/sh/io_parser"
 
-# parse files from input
+# parse table files 
 pass_no="First"
-bf_n=0
-for input_file in "${input_files[@]}"; do
-    case "${input_file##*.}" in
-        "bam")
-                bam_files[${bf_n}]="${input_file}"
-                bf_n=$((bf_n + 1))
-                ;;
-        "fa")
-                fasta_file="${input_file}"
-                ;;
-        "vcf")
-                vcf_file="${input_file}"
-                ;;
-        "bed")
-                bed_file="${input_file}"
-                ;;
-        "table")
-                first_pass_table="${input_file}"
-                pass_no="Second"
-                ;;
-        *)
-                printf "Unrecognised input file: %s\n" "${input_file}" >&2
-                exit 1
-                ;;
-    esac
-done
+if [[ "${input_table-}" ]]; then
+    pass_no="Second"
+fi
 
 printf "[ %s: %s-pass covariation analysis ]\n" \
        "$(date)" "${pass_no}"
 
 # make outdir
-outdir="$(dirname "${output_files}")"
+outdir="$(dirname "${output_table}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
 log_file="${outdir}/BaseRecalibrator.${pass_no}.log"
 job_name="BaseRecalibrator_${pass_no}"
 
-# check variables
-printf "     input_files: %s\n" "${input_files[@]}"
-printf "    output_files: %s\n" "${output_files}"
-printf "        bam_file: %s\n" "${bam_files[@]}"
-printf "        vcf_file: %s\n" "${vcf_file}"
-printf "        bed_file: %s\n" "${bed_file}"
-printf "      fasta_file: %s\n" "${fasta_file}"
-printf "        log_file: %s\n" "${log_file}"
-
-bam_files_arg="$(printf " -I %s " "${bam_files[@]}")"
+# build command
+bam_files_arg="$(printf " -I %s " "${input_bam[@]}")"
 
 cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
       -jobNative "-n 2 -J ${job_name}" -log "${log_file}"
       -S "src/scala/ScatterBaseRecalibrator.scala" 
-      -R "${fasta_file}" ${bam_files_arg}
-      -L "${bed_file}"
-      -knownSites "${vcf_file}"
-      -out "${output_files}" -run )
+      -R "${input_fa}" ${bam_files_arg}
+      -L "${input_bed}"
+      -knownSites "${input_vcf}"
+      -out "${output_table}" -run )
 
 if [[ "${pass_no}" == "Second" ]]; then
-    printf "first_pass_table: %s\n" "${first_pass_table}"
-    cmd+=( "-BQSR" "${first_pass_table}" )
+    printf "first_pass_table: %s\n" "${input_table}"
+    cmd+=( "-BQSR" "${input_table}" )
 fi
 
 shopt -s extglob
