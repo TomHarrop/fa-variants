@@ -18,9 +18,9 @@ GenerateMessage(paste(
 
 # parse CLI
 command.args <- commandArgs(trailingOnly = TRUE)
-# command.args <- c("-i", "output/covar_analysis/post_recal_data.table",
-#                   "-i", "output/covar_analysis/recal_data.table",
-#                   "-o", "test/out.pdf")
+# command.args <- c("-r", "output/covar_analysis/post_recal_data.table",
+#                   "-r", "output/covar_analysis/recal_data.table",
+#                   "-t", "test/out.pdf")
 parsed.args <- argparsR::ParseArguments(
   accepted.switches = list(
     `output.files` = "-r", `input.files` = "-t"),
