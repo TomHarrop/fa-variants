@@ -1,87 +1,40 @@
 #!/usr/bin/env bash
 
-input_files=()
-output_files=""
 gatk="bin/GenomeAnalysisTK-3.6/GenomeAnalysisTK.jar"
-
-# parse options
-OPTIND=1
-if_n=0
-while getopts ":i:o:" opt; do
-    case "${opt}" in
-        i)  input_files[${if_n}]="${OPTARG}"
-            if_n=$((if_n + 1))
-            ;;
-        o)  output_files="${OPTARG}"
-            ;;
-        :)
-            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-        \?)
-            printf "Invalid option: -%s\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-    esac
-done
-shift "$((OPTIND-1))"
-
-source "src/sh/bash_header"
-
-###############
-# CODE STARTS #
-###############
 
 printf "[ %s: Split and trim and reassign mapping qualities ]\n" \
        "$(date)"
 
+source "src/sh/bash_header"
+source "src/sh/io_parser"
+
 java_ram=$((max_cpus*3))"g"
 mrir=$((ram_limit/6000)) # max records in RAM
 
-# parse fasta file from input
-for input_file in "${input_files[@]}"; do
-    if printf "%s" "${input_file}" | grep -q "bam$"; then
-        bam_file="${input_file}"
-    elif printf "%s" "${input_file}" | grep -q "fa$"; then
-        fasta_file="${input_file}"
-    elif printf "%s" "${input_file}" | grep -q "fai$"; then
-        printf "         fai: %s\n" "${input_file}"
-    elif printf "%s" "${input_file}" | grep -q "dict$"; then
-        printf "        dict: %s\n" "${input_file}"
-    else
-        printf "ERROR: %s not recognised\n" "${input_file}"
-        exit 1
-    fi
-done
-
 # make outdir
-outdir="output/split_trim"
+outdir="$(dirname "${output_bam}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
-bn="$(basename "${bam_file}" .deduped.bam)"
+bn="$(basename "${input_bam}" .deduped.bam)"
 log_file="${outdir}/${bn}.log"
 
-# check variables
-printf " input_files: %s\n" "${input_files[@]}"
-printf "output_files: %s\n" "${output_files}"
-printf "    bam_file: %s\n" "${bam_file}"
-printf "  fasta_file: %s\n" "${fasta_file}"
-printf "    log_file: %s\n" "${log_file}"
-
-cmd="java -Xmx${java_ram} -jar ${gatk} \
-        --bam_compression 9 --maxReadsInMemory ${mrir} \
-        -T SplitNCigarReads \
-        -R ${fasta_file} -I ${bam_file} -o ${output_files} \
-        -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60 \
-        -U ALLOW_N_CIGAR_READS"
+# build command
+cmd=( java "-Xmx${java_ram}" -jar "${gatk}"
+      --bam_compression 9 --maxReadsInMemory "${mrir}"
+      -T SplitNCigarReads
+      -R "${input_fa}" -I "${input_bam}" -o "${output_bam}"
+      -rf ReassignOneMappingQuality -RMQF 255 -RMQT 60
+      -U ALLOW_N_CIGAR_READS )
 
 shopt -s extglob
-printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+printf "Final command line: "
+printf "%s " "${cmd[@]//+([[:blank:]])/ }"
+printf "\n"
 shopt -u extglob
 
-srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
-    --output="${log_file}" ${cmd} &
+echo srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+    --output="${log_file}" "${cmd[@]}" &
 
 printf "[ %s: Waiting for SplitNCigarReads to finish ]\n" "$(date)"
 FAIL=0

@@ -1,6 +1,6 @@
     Script,src/sh/split_trim
     branch,master
-    hash,37760eed6ad5a510c41a90d2999f3458a0be7613
-    date,2016-08-16
+    hash,acf758c74a467ba1da4d0a1d40644eda12e3682e
+    date,2016-09-02
     gatk version,3.6-0-g89b7209
     output,output/split_trim
