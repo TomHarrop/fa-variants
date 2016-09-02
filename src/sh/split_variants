@@ -20,7 +20,7 @@ fi
 
 # run one SelectVariants command per output_file
 for species_file in "${output_vcf[@]}"; do
-    species_prefix="$(basename "${species_file}" ".variants_filtered.vcf")"
+    species_prefix="$(basename "${species_file}" ".variants_filtered.vcf.gz")"
     log_file="${outdir}/${species_prefix}.SelectVariants.log"
 
     printf "\n  species_prefix: %s\n" "${species_prefix}"
