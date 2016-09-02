@@ -1,6 +1,0 @@
-    Script,src/sh/split_variants
-    branch,master
-    hash,d5239f6c4db6d219ea0c8ee21d8caf8c09fd7ff7
-    date,2016-09-02
-    gatk version,3.6-0-g89b7209
-    output,output/split_variants

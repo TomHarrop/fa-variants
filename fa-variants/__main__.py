@@ -51,8 +51,9 @@ def main():
 
     # subset the files while the pipeline is in development. Make this equal
     # to the raw_files to run the whole pipline.
-    active_raw_files = [x for x in raw_files if
-                        'G1' in x or 'G4' in x or 'J1' in x or 'J4' in x]
+    # active_raw_files = [x for x in raw_files if
+    #                     'G1' in x or 'G4' in x or 'J1' in x or 'J4' in x]
+    active_raw_files = raw_files
 
     # species short names for vcf splitting
     species_short_names = list(set(
