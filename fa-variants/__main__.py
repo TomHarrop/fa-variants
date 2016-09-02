@@ -36,6 +36,12 @@ def main():
     # PIPELINE STEPS #
     ##################
 
+    # test function for checking input/output passed to job_script and parsing
+    # by io_parser
+    test_job_function = functions.generate_job_function(
+        job_script='src/sh/io_parser',
+        job_name='test')
+
     # initialise pipeline
     main_pipeline = ruffus.Pipeline.pipelines["main"]
 
@@ -104,7 +110,7 @@ def main():
         output='.bed')
 
     # mark duplicates with picard
-    deduped = main_pipeline.subdivide(
+    deduped = main_pipeline.transform(
         name='dedupe',
         task_func=functions.generate_job_function(
             job_script='src/sh/mark_duplicates_and_sort',
@@ -113,8 +119,7 @@ def main():
             cpus_per_task=2),
         input=mapped_raw,
         filter=ruffus.regex(r"data/bam/(.*).Aligned.out.bam"),
-        output=(r"output/mark_duplicates_and_sort/\1.deduped.bam",
-                r"output/mark_duplicates_and_sort/\1.deduped.bai"))
+        output=(r"output/mark_duplicates_and_sort/\1.deduped.bam"))
 
     # Split'N'Trim and reassign mapping qualities
     split_and_trimmed = main_pipeline.transform(
@@ -133,9 +138,6 @@ def main():
 
     # we're going to recycle call_variants, merge_variants, filter_variants
     # and analyze_covar so we'll get the functions in advance
-    test_job_function = functions.generate_job_function(
-        job_script='src/sh/io_parser',
-        job_name='test')
     call_variants = functions.generate_queue_job_function(
         job_script='src/sh/call_variants',
         job_name='call_variants')

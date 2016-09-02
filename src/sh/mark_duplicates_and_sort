@@ -1,43 +1,17 @@
 #!/usr/bin/env bash
 
-# parse options
-OPTIND=1
-while getopts ":i:o:" opt; do
-    case "${opt}" in
-        i)  input_files="${OPTARG}"
-            ;;
-        o)  output_files="${OPTARG}"
-            ;;
-        :)
-            printf "Option -%s requires an argument.\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-        \?)
-            printf "Invalid option: -%s\n" "${OPTARG}" >&2
-            exit 1
-            ;;
-    esac
-done
-shift "$((OPTIND-1))"
+printf "[ %s: Add read groups, sort, deduplicate and create index ]\n" \
+       "$(date)"
 
 source "src/sh/bash_header"
-
-printf " input_files: %s\n" "${input_files}"
-printf "output_files: %s\n" "${output_files}"
-
-###############
-# CODE STARTS #
-###############
+source "src/sh/io_parser"
 
 picard_ram=$((max_cpus*3))"g"
 mrir=$((ram_limit/6000)) # max records in RAM
 gc_threads=$((max_cpus-1)) # number of garbage collecting threads
 
-printf "[ %s: Add read groups, sort, deduplicate and create index ]\n" \
-       "$(date)"
-
 # make outdir
-outdir="output/mark_duplicates_and_sort"
+outdir="$(dirname "${output_bam}")"
 if [[ ! -d "${outdir}" ]]; then
     mkdir -p "${outdir}"
 fi
@@ -48,20 +22,22 @@ fi
 
 # parse RG information from BAM:
 # RGPU=flowcell+lane
-bam_line="$(samtools view "${input_files}" | head -n 1)"
+bam_line="$(samtools view "${input_bam}" | head -n 1)"
 flowcell="$(printf "%s" "${bam_line}" | cut -d ':' -f 3)"
 lane="$(printf "%s" "${bam_line}" | cut -d ':' -f 4)"
 rgpu="${flowcell}"."${lane}"
 # RGLB = library, RGID = library
-rglb="$(basename "${input_files}" .Aligned.out.bam)"
+rglb="$(basename "${input_bam}" .Aligned.out.bam)"
 # RGSM = sample
-rgid="${rglb:0:1}"
-library_number="${rglb:1:1}"
-if [[ "${library_number}" -le 3 ]]; then
-    rgsm="${rgid}.PBM"
-else
-    rgsm="${rgid}.SM"
-fi
+rgsm="${rglb:0:1}" # this sets sample to species
+
+# to set sample to stage within species, enable this block
+# library_number="${rglb:1:1}"
+# if [[ "${library_number}" -le 3 ]]; then
+#     rgsm="${rgid}.PBM"
+# else
+#     rgsm="${rgid}.SM"
+# fi
 
 printf "[ %s: Setting read groups ]\n" "$(date)"
 printf "RGLB: %s\n" "${rglb}"
@@ -73,47 +49,48 @@ sorted_bam_file="${outdir}"/"${rglb}".rg_added_sorted.bam
 log_file="${outdir}"/"${rglb}".AddOrReplaceReadGroups.log
 
 # run AddOrReplaceReadGroups
-cmd1="java -Xmx${picard_ram} -XX:ParallelGCThreads=${gc_threads} \
-        -jar bin/picard.jar \
-        AddOrReplaceReadGroups \
-        MAX_RECORDS_IN_RAM=${mrir} TMP_DIR=${tmpdir} COMPRESSION_LEVEL=9 \
-        I=${input_files} O=${sorted_bam_file} SO=coordinate \
-        RGID=${rglb} RGLB=${rglb} RGSM=${rgsm} RGPL=illumina RGPU=${rgpu}"
+cmd1=( java "-Xmx${picard_ram}" "-XX:ParallelGCThreads=${gc_threads}" 
+       -jar bin/picard.jar AddOrReplaceReadGroups 
+       "MAX_RECORDS_IN_RAM=${mrir}" "TMP_DIR=${tmpdir}"
+       "I=${input_bam}" "O=${sorted_bam_file}" "SO=coordinate" 
+       "RGID=${rglb}" "RGLB=${rglb}" "RGSM=${rgsm}"
+       "RGPL=illumina" "RGPU=${rgpu}" )
 
 printf "[ %s: Adding read groups and sorting BAM to file ]\n" "$(date)"
-printf "   sorted_bam_file: %s\n" "${sorted_bam_file}"
-printf "          log_file: %s\n" "${log_file}"
-printf "Final command line: %s\n" "${cmd1//+( )/ }" # remove multiple spaces
+shopt -s extglob
+printf "Final command line: "
+printf "%s " "${cmd1[@]//+([[:blank:]])/ }"
+printf "\n"
+shopt -u extglob
 
 srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
-    --job-name="${rglb}" --output="${log_file}" ${cmd1} &
+    --job-name="${rglb}" --output="${log_file}" "${cmd1[@]}" &
 
 printf "[ %s: Waiting for AddOrReplaceReadGroups to finish ]\n" "$(date)"
 FAIL=0
 fail_wait
 
 # set output files
-dedupped_bam_file="${output_files}"
 metrics_file="${outdir}"/"${rglb}".metrics
 log_file="${outdir}"/"${rglb}".MarkDuplicates.log
 
 # run MarkDuplicates
-cmd2="java -Xmx${picard_ram} -XX:ParallelGCThreads=${gc_threads} \
-        -jar bin/picard.jar \
-        MarkDuplicates \
-        MAX_RECORDS_IN_RAM=${mrir} TMP_DIR=${tmpdir} COMPRESSION_LEVEL=9 \
-        VALIDATION_STRINGENCY=SILENT REMOVE_DUPLICATES=true \
-        I=${sorted_bam_file} O=${dedupped_bam_file} \
-        CREATE_INDEX=true  METRICS_FILE=${metrics_file}"
+cmd2=( java "-Xmx${picard_ram}" "-XX:ParallelGCThreads=${gc_threads}" 
+       -jar bin/picard.jar MarkDuplicates 
+       "MAX_RECORDS_IN_RAM=${mrir}" "TMP_DIR=${tmpdir}" "COMPRESSION_LEVEL=9"
+       "VALIDATION_STRINGENCY=SILENT" "REMOVE_DUPLICATES=true" 
+       "I=${sorted_bam_file}" "O=${output_bam}" 
+       "CREATE_INDEX=true"  "METRICS_FILE=${metrics_file}" )
 
 printf "[ %s: Marking duplicates ]\n" "$(date)"
-printf " dedupped_bam_file: %s\n" "${dedupped_bam_file}"
-printf "      metrics_file: %s\n" "${metrics_file}"
-printf "          log_file: %s\n" "${log_file}"
-printf "Final command line: %s\n" "${cmd2//+( )/ }" # remove multiple spaces
+shopt -s extglob
+printf "Final command line: "
+printf "%s " "${cmd2[@]//+([[:blank:]])/ }"
+printf "\n"
+shopt -u extglob
 
 srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
-    --job-name="${rglb}" --output="${log_file}" ${cmd2} &
+    --job-name="${rglb}" --output="${log_file}" "${cmd2[@]}" &
 
 printf "[ %s: Waiting for MarkDuplicates to finish ]\n" "$(date)"
 FAIL=0
