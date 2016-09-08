@@ -17,14 +17,13 @@ log_file="${outdir}/${bn}.HaplotypeCaller.log"
 job_name="${bn}_HaplotypeCaller"
 
 # make temporary directories for scattergather
-run_dir="$(mktemp -d -t "${bn}.queue_run.XXXXXXXXXX")"
 temp_dir="$(mktemp -d -t "${bn}.queue_temp.XXXXXXXXXX")"
 job_sg_dir="$(mktemp -d -t "${bn}.queue_sg.XXXXXXXXXX")"
 
 # build command
 cmd=( java -jar "${queue_jar}" -disableJobReport -jobRunner Drmaa
       -jobNative "-n 2 -J ${job_name}" -log "${log_file}"
-      -runDir "${run_dir}" -tempDir "${temp_dir}" -jobSGDir "${job_sg_dir}"
+      -tempDir "${temp_dir}" -jobSGDir "${job_sg_dir}"
       -S "src/scala/ScatterHaplotypeCaller.scala"
       -R "${input_fa}" -L "${input_bed}" -I "${input_bam}" 
       -out "${output_vcf}" -run )
@@ -43,7 +42,7 @@ FAIL=0
 fail_wait
 
 # tidy up temporary directories
-rm -r "${run_dir}" "${temp_dir}" "${job_sg_dir}"
+rm -r "${temp_dir}" "${job_sg_dir}"
 
 # log metadata
 metadata_file="${outdir}/call_variants.METADATA.csv"
