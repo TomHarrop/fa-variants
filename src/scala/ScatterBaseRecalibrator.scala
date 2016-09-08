@@ -19,14 +19,14 @@ class ScatterBaseRecalibrator extends QScript {
 
   @Argument(doc="Input covariates table file for on-the-fly base quality score recalibration", shortName="BQSR", required=false)
   var bqsr: File = _
-
+ 
   def script() {
     val br = new BaseRecalibrator
     // Run options
     br.read_buffer_size = 1000000
     br.nct = 2
     br.memoryLimit = 6
-    br.javaGCThreads = 1
+    br.javaGCThreads = 2
     br.scatterCount = 12
     // HaplotypeCaller options
     br.interval_padding = if (intervals == null) 0 else 100

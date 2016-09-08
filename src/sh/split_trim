@@ -33,7 +33,7 @@ printf "%s " "${cmd[@]//+([[:blank:]])/ }"
 printf "\n"
 shopt -u extglob
 
-echo srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
+srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
     --output="${log_file}" "${cmd[@]}" &
 
 printf "[ %s: Waiting for SplitNCigarReads to finish ]\n" "$(date)"
