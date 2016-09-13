@@ -229,7 +229,7 @@ def main():
             job_script='src/sh/recalibrate',
             job_name='recalibrate',
             job_type='transform',
-            cpus_per_task=1),
+            cpus_per_task=2),
         input=split_and_trimmed,
         add_inputs=ruffus.add_inputs([ref_fa, covar_report]),
         filter=ruffus.formatter('output/split_trim/(?P<LIB>.+).split.bam'),

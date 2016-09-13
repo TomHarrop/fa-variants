@@ -24,8 +24,8 @@ class ScatterBaseRecalibrator extends QScript {
     val br = new BaseRecalibrator
     // Run options
     br.read_buffer_size = 1000000
-    br.nct = 2
-    br.memoryLimit = 6
+    br.nct = 4
+    br.memoryLimit = 12
     br.javaGCThreads = 2
     br.scatterCount = 12
     // HaplotypeCaller options
