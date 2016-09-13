@@ -19,22 +19,22 @@ bn="$(basename "${output_bam}" ".recal.bam")"
 log_file="${outdir}/${bn}.PrintReads.log"
 
 # build command
-cmd="java -Xmx${java_ram} -jar ${gatk} \
-        -T PrintReads \
-        --bam_compression 9 --read_buffer_size ${mrir} \
-        --num_cpu_threads_per_data_thread ${max_cpus} \
-        -R ${input_fa}  \
-        -I ${input_bam} \
-        -BQSR ${input_table} \
-        -o ${output_bam}"
+cmd=( java "-Xmx${java_ram}" "-XX:ParallelGCThreads=${max_cpus}" 
+      -jar "${gatk}" -T PrintReads
+      --bam_compression 9 --read_buffer_size "${mrir}"
+      --num_cpu_threads_per_data_thread "${max_cpus}"
+      -R "${input_fa}" -I "${input_bam}" -BQSR "${input_table}"
+      -o "${output_bam}" )
 
 shopt -s extglob
-printf "Final command line: %s\n" "${cmd//+([[:blank:]])/ }"
+printf "Final command line: "
+printf "%s " "${cmd[@]//+([[:blank:]])/ }"
+printf "\n"
 shopt -u extglob
 
 # run PrintReads
 srun --ntasks=1 --cpus-per-task="${max_cpus}" --exclusive \
-    --output="${log_file}" ${cmd} &
+    --output="${log_file}" "${cmd[@]}" &
 
 printf "[ %s: Waiting for PrintReads to finish ]\n" "$(date)"
 FAIL=0

@@ -26,7 +26,7 @@ class ScatterBaseRecalibrator extends QScript {
     br.read_buffer_size = 1000000
     br.nct = 4
     br.memoryLimit = 12
-    br.javaGCThreads = 2
+    br.javaGCThreads = 4
     br.scatterCount = 12
     // HaplotypeCaller options
     br.interval_padding = if (intervals == null) 0 else 100
