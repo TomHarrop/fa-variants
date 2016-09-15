@@ -18,14 +18,13 @@ GenerateMessage(paste(
 
 # parse CLI
 command.args <- commandArgs(trailingOnly = TRUE)
-# command.args <- c("-r", "output/covar_analysis/post_recal_data.table",
-#                   "-r", "output/covar_analysis/recal_data.table",
-#                   "-t", "test/out.pdf")
+# command.args <- c("-t", "output/covar_analysis/post_recal_data.table",
+#                   "-t", "output/covar_analysis/recal_data.table",
+#                   "-r", "test/out.pdf")
 parsed.args <- argparsR::ParseArguments(
   accepted.switches = list(
     `output.files` = "-r", `input.files` = "-t"),
   command.args)
-
 
 # get before and after tables from input.files
 after.table.file <- grep(
@@ -71,14 +70,12 @@ covariate.table[, EventType := factor(
 cycle.table <- covariate.table[CovariateName == "Cycle"]
 cycle.table[, CovariateValue := as.numeric(as.character(CovariateValue))]
 
-
 nt <- c("A", "T", "C", "G")
 di.nt <- paste0(expand.grid(nt, nt)[, 1], expand.grid(nt, nt)[, 2])
 dinuc.table <- covariate.table[CovariateName == "Context" &
                                  CovariateValue %in% di.nt]
 
 # set up scale
-x <- c(NA, 1e+07, 2e+07, 3e+07, 4e+07, 5e+07, NA)
 obs.formatter <- function(x, debug = TRUE) {
   
   # decimal and exponential component
@@ -118,7 +115,7 @@ p1 <- ggplot(quality.score.table,
   xlab("Reported quality score") +
   ylab("Empirical quality score") +
   ggtitle("Reported vs. empirical quality") +
-  facet_grid(EventType ~ ReadGroup + analysis) +
+  facet_grid(ReadGroup ~ EventType + analysis) +
   geom_abline(slope = 1, intercept = 0, linetype = 2,
               colour = alpha("black", 0.5)) +
   geom_point(alpha = 0.75) +
@@ -133,7 +130,7 @@ p2 <- ggplot(quality.score.table,
   theme_bw() +
   xlab("Reported quality score") +
   ggtitle("Distribution of quality scores") +
-  facet_grid(ReadGroup + EventType ~ analysis) +
+  facet_grid(ReadGroup ~ EventType + analysis) +
   geom_density(stat = "identity", alpha = 0.5) +
   scale_color_brewer(palette = "Set1", guide = FALSE) +
   scale_fill_brewer(palette = "Set1", guide = FALSE) +
