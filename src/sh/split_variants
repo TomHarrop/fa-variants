@@ -33,7 +33,7 @@ for species_file in "${output_vcf[@]}"; do
           --read_buffer_size "${mrir}" --num_threads "${cpus_per_task}"
           -R "${input_fa}" -V "${input_vcf}"
           -o "${species_file}"
-          -sn "${species_prefix}.SM" -sn "${species_prefix}.PBM"
+          -sn "${species_prefix}"
           --excludeNonVariants --removeUnusedAlternates )
 
     shopt -s extglob
