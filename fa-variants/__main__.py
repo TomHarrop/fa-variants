@@ -275,7 +275,28 @@ def main():
         output=[('output/split_variants/' + x + '.variants_filtered.vcf.gz')
                 for x in species_short_names])
 
-    # regenerate FASTA files per species
+    # count variants per gene per species
+    cds_variants = main_pipeline.transform(
+        name='cds_variants',
+        task_func=functions.generate_job_function(
+            job_script='src/R/cds_variants.R',
+            job_name='cds_variants',
+            job_type='transform'),
+        input=split_variants,
+        add_inputs=ruffus.add_inputs([ref_fa, annot]),
+        filter=ruffus.formatter(
+            'output/split_variants/(?P<LIB>.+).variants_filtered.vcf.gz'),
+        output='{subdir[0][1]}/cds_variants/{LIB[0]}.cds_variants.Rds')
+
+    # merge counted variants
+    variants_per_gene = main_pipeline.merge(
+        name='cds_merge',
+        task_func=functions.generate_job_function(
+            job_script='src/R/cds_merge.R',
+            job_name='cds_merge',
+            job_type='transform'),
+        input=cds_variants,
+        output='output/cds_variants/cds_variants.Rds')
 
     ###################
     # RUFFUS COMMANDS #

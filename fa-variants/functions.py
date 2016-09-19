@@ -62,7 +62,8 @@ def io_file_to_bash_flag(file_name, file_type, debug=False):
         '.gtf': 'j',
         '.bed': 'l',
         '.table': 't',
-        '.vcf': 'v'}
+        '.vcf': 'v',
+        '.Rds': 'y'}
     output_flags = {
         '.bam': 'c',
         '.bai': 'd',
@@ -74,7 +75,8 @@ def io_file_to_bash_flag(file_name, file_type, debug=False):
         '.bed': 'm',
         '.pdf': 'r',
         '.table': 'u',
-        '.vcf': 'w'}
+        '.vcf': 'w',
+        '.Rds': 'z'}
 
     # get the first extension and deal with .gz files
     file_ext = os.path.splitext(file_name)[1]
