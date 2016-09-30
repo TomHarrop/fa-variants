@@ -5,9 +5,6 @@ library(data.table)
 rutils::GenerateMessage("Merge cds_variants results")
 
 command.args <- commandArgs(trailingOnly = TRUE)
-# command.args <- c("-y", "test/G.table.Rds",
-#                   "-y", "test/B.table.Rds",
-#                   "-z", "output/test/cds_variants.Rds")
 parsed.args <- argparsR::ParseArguments(
   accepted.switches = list(
     `other.input` = "-y",
@@ -19,11 +16,11 @@ rutils::GenerateMessage("Generating accession column")
 input.names <- sapply(parsed.args$other.input, function(x)
   gsub("^([[:alpha:]]).*", "\\1", basename(x)))
 input.names <- plyr::revalue(input.names, c(
-  "B" = "Oryza barthii",
-  "G" = "Oryza glaberrima",
-  "J" = "Oryza sativa japonica",
-  "I" = "Oryza sativa indica",
-  "R" = "Oryza rufipogon"
+  "B" = "oryza_barthii",
+  "G" = "oryza_glaberrima",
+  "J" = "oryza_sativa",
+  "I" = "oryza_indica",
+  "R" = "oryza_rufipogon"
 ), warn_missing = FALSE)
   
 # read input
